@@ -549,6 +549,9 @@ public class PlayPen extends JPanel
 	protected boolean draggingContainerPanes = false;
 
 	private boolean selectionInProgress = false;
+
+	/** True while the Ctrl key is held down. Used to enable canvas panning. */
+	private boolean ctrlDown = false;
 	
 	/**
 	 * A RenderingHints value of VALUE_ANTIALIAS_ON, VALUE_ANTIALIAS_OFF, or VALUE_ANTIALIAS_DEFAULT.
@@ -924,8 +927,14 @@ public class PlayPen extends JPanel
                 }
             }
 
-            public void keyPressed(KeyEvent e) { changeCursor(e); }
-            public void keyReleased(KeyEvent e) { changeCursor(e); }
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_CONTROL) ctrlDown = true;
+                changeCursor(e);
+            }
+            public void keyReleased(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_CONTROL) ctrlDown = false;
+                changeCursor(e);
+            }
             public void keyTyped(KeyEvent e) { changeCursor(e); }
             
         });
@@ -2428,6 +2437,12 @@ public class PlayPen extends JPanel
                 return;
             }
 
+            // ignore drag events when Ctrl is held (canvas pan mode)
+            if (dge.getTriggerEvent() instanceof MouseEvent
+                    && (dge.getTriggerEvent().getModifiersEx() & InputEvent.CTRL_DOWN_MASK) != 0) {
+                return;
+            }
+
 			if (draggingContainerPanes) {
 				logger.debug(
 						"TablePaneDragGestureListener: ignoring drag event " + //$NON-NLS-1$
@@ -2505,10 +2520,8 @@ public class PlayPen extends JPanel
 		 */
 		protected Point rubberBandOrigin;
 
-		/** Pan-by-drag state: screen point where Ctrl+drag started. */
-		private Point panDragOrigin;
-		/** Pan-by-drag state: viewport position when Ctrl+drag started. */
-		private Point panViewOrigin;
+		/** Last mouse position during a Ctrl+drag pan, for incremental delta. */
+		private Point lastPanPos;
 		// ------------------- MOUSE LISTENER INTERFACE ------------------
 
 		public void mouseEntered(MouseEvent evt) {
@@ -2537,9 +2550,8 @@ public class PlayPen extends JPanel
 
 		public void mousePressed(MouseEvent evt) {
 		    requestFocus();
-		    if ((evt.getModifiersEx() & MouseEvent.CTRL_DOWN_MASK) != 0) {
-		        panDragOrigin = evt.getPoint();
-		        panViewOrigin = getViewPosition();
+		    if (ctrlDown) {
+		        lastPanPos = evt.getPoint();
 		        return;
 		    }
 			Point p = evt.getPoint();
@@ -2561,9 +2573,8 @@ public class PlayPen extends JPanel
 		}
 
 		public void mouseReleased(MouseEvent evt) {
-		    if (panDragOrigin != null) {
-		        panDragOrigin = null;
-		        panViewOrigin = null;
+		    if (ctrlDown) {
+		        lastPanPos = null;
 		        return;
 		    }
 
@@ -2591,17 +2602,21 @@ public class PlayPen extends JPanel
 
 		// ---------------- MOUSEMOTION LISTENER INTERFACE -----------------
 		public void mouseDragged(MouseEvent evt) {
+		    if (ctrlDown) {
+		        if (lastPanPos != null) {
+		            int dx = evt.getX() - lastPanPos.x;
+		            int dy = evt.getY() - lastPanPos.y;
+		            Point vp = getViewPosition();
+		            setViewPosition(new Point(Math.max(0, vp.x - dx), Math.max(0, vp.y - dy)));
+		        }
+		        lastPanPos = evt.getPoint();
+		        return;
+		    }
+		    lastPanPos = null;
 			mouseMoved(evt);
 		}
 
 		public void mouseMoved(MouseEvent evt) {
-		    if (panDragOrigin != null) {
-		        int dx = evt.getX() - panDragOrigin.x;
-		        int dy = evt.getY() - panDragOrigin.y;
-		        Point newPos = new Point(Math.max(0, panViewOrigin.x - dx), Math.max(0, panViewOrigin.y - dy));
-		        setViewPosition(newPos);
-		        return;
-		    }
 			if (rubberBand != null) {
 				// repaint old region in case of shrinkage
 				Rectangle dirtyRegion = zoomRect(new Rectangle(rubberBand));
