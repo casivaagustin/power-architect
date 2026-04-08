@@ -31,6 +31,74 @@ Power\*Architect is an open-source data modeling and database design tool built 
 
 ---
 
+## Local Environment Setup (SDKMAN)
+
+[SDKMAN](https://sdkman.io) is the recommended way to install and manage JDK and Ant locally, without touching your system-wide Java installation.
+
+### 1. Install SDKMAN
+
+```bash
+curl -s "https://get.sdkman.io" | bash
+source ~/.sdkman/bin/sdkman-init.sh
+```
+
+Add the following line to your `~/.bashrc` or `~/.zshrc` if it wasn't added automatically:
+
+```bash
+source "$HOME/.sdkman/bin/sdkman-init.sh"
+```
+
+### 2. Install JDK 11
+
+```bash
+sdk install java 11.0.23-tem
+```
+
+To list available JDK 11 distributions:
+
+```bash
+sdk list java | grep "11\."
+```
+
+### 3. Install Apache Ant
+
+```bash
+sdk install ant
+```
+
+This installs the latest Ant version (1.10+), which satisfies the 1.7+ requirement.
+
+### 4. Pin versions for this project
+
+From the project root, create an `.sdkmanrc` file to lock the versions used in this project:
+
+```bash
+sdk env init
+```
+
+Then edit `.sdkmanrc` to set the correct versions, for example:
+
+```
+java=11.0.23-tem
+ant=1.10.14
+```
+
+From this point on, running `sdk env` in the project directory will switch to the pinned versions automatically. To activate on every `cd`, add this to your shell config:
+
+```bash
+# ~/.bashrc or ~/.zshrc
+export SDKMAN_AUTO_ENV=true
+```
+
+### 5. Verify
+
+```bash
+java -version   # should report openjdk 11
+ant -version    # should report Apache Ant 1.10+
+```
+
+---
+
 ## Project Structure
 
 ```
@@ -55,14 +123,24 @@ The project depends on **sqlpower-library**, a sibling project that is automatic
 
 ## Local Setup
 
-### 1. Clone the repository
+### 1. Install dependencies
+
+Follow the [Local Environment Setup (SDKMAN)](#local-environment-setup-sdkman) section above to install JDK 11 and Ant before proceeding.
+
+### 2. Clone the repository
 
 ```bash
 git clone https://github.com/casivaagustin/power-architect.git
 cd power-architect
 ```
 
-### 2. sqlpower-library dependency
+Activate the project's pinned SDK versions:
+
+```bash
+sdk env
+```
+
+### 3. sqlpower-library dependency
 
 The build system will automatically clone `sqlpower-library` from GitHub into `../sqlpower-library` (a sibling directory) the first time you run any Ant target. No manual action is required.
 
