@@ -19,6 +19,7 @@
 package ca.sqlpower.architect.swingui;
 
 import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
@@ -27,6 +28,10 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.beans.PropertyChangeEvent;
 import java.sql.DatabaseMetaData;
 import java.util.ArrayList;
@@ -42,13 +47,16 @@ import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.JTree;
+import javax.swing.ListSelectionModel;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
@@ -108,7 +116,7 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
     
     private static final Logger logger = Logger.getLogger(ColumnEditPanel.class);
 
-    private static final Font TITLE_FONT = UIManager.getFont("Label.font").deriveFont(Font.BOLD, 10f);
+    private static final Font TITLE_FONT = UIManager.getFont("Label.font").deriveFont(Font.BOLD);
 
     /**
      * A simple enum that gives a nicer name to true and false for combo boxes.
@@ -184,7 +192,11 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
     
     private final JTextField colPhysicalName;
 
-    private final JButton typeChooserButton;
+    private final JTextField typeChooserButton;
+    private final JList<UserDefinedSQLType> typeDropList;
+    private final JPopupMenu typePopup;
+    private final List<UserDefinedSQLType> allTypes = new ArrayList<>();
+    private boolean updatingTypeField = false;
     
     private final JTree colType;
 
@@ -272,94 +284,6 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
         int row = 1;
         int width = 5;
         layout.appendRow(RowSpec.decode("p"));
-        panel.add(makeTitle(Messages.getString("ColumnEditPanel.source")), cc.xyw(2, row++, width)); //$NON-NLS-1$
-        layout.appendRow(RowSpec.decode("p"));
-        
-        cb = new JCheckBox();
-        if (cols.size() > 1) {
-            panel.add(cb, cc.xy(1, row));
-        }
-        
-        colSourceTree = new JTree();
-        DBTreeModel sourceTreeModel = new DBTreeModel(session.getRootObject(), colSourceTree, false, true, false, false, false) {
-            @Override
-            public Object getChild(Object parent, int index) {
-                if (parent == sourceNotSpecifiedTreeNode) {
-                    return null;
-                } else if (parent == getRoot()) {
-                    if (index == 0) {
-                        return sourceNotSpecifiedTreeNode;
-                    } else {
-                        return super.getChild(parent, index - 1);
-                    }
-                } else {
-                    return super.getChild(parent, index);
-                }
-            }
-            @Override
-            public int getChildCount(Object parent) {
-                if (parent == sourceNotSpecifiedTreeNode) {
-                    return 0;
-                } else if (parent == getRoot()) {
-                    return super.getChildCount(parent) + 1;
-                } else {
-                    return super.getChildCount(parent);
-                }
-            }
-            @Override
-            public int getIndexOfChild(Object parent, Object child) {
-                if (parent == sourceNotSpecifiedTreeNode) {
-                    return -1;
-                } else if (child == sourceNotSpecifiedTreeNode) {
-                    return 0;
-                } else if (parent == getRoot()) {
-                    int index = super.getIndexOfChild(parent, child);
-                    if (index != -1) {
-                        return index + 1;
-                    } else {
-                        return -1;
-                    }
-                } else {
-                    return super.getIndexOfChild(parent, child);
-                }
-            }
-            @Override
-            public boolean isLeaf(Object parent) {
-                if (parent == sourceNotSpecifiedTreeNode) {
-                    return true;
-                } else {
-                   return super.isLeaf(parent);
-                }
-            }
-            
-        };
-        colSourceTree.setModel(sourceTreeModel);
-        colSourceTree.setRootVisible(false);
-        colSourceTree.setShowsRootHandles(true);
-        colSourceTree.setCellRenderer(new DBTreeCellRenderer() {
-            @Override
-            public Component getTreeCellRendererComponent(JTree tree, Object value, boolean sel, boolean expanded,
-                    boolean leaf, int row, boolean hasFocus) {
-                super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus);
-                if (!sel && value == sourceNotSpecifiedTreeNode) {
-                    setForeground(getTextNonSelectionColor());
-                }
-                return this;
-            }
-        });
-        colSourceTree.getSelectionModel().setSelectionMode(
-                TreeSelectionModel.SINGLE_TREE_SELECTION);
-        
-        colSourceButton = new JButton();
-        colSourceButton.setAction(new PopupJTreeAction(panel, colSourceTree, colSourceButton, SQLColumn.class));
-        
-        panel.add(colSourceButton, cc.xyw(2, row++, 5));
-        componentEnabledMap.put(colSourceTree, cb);
-        
-        layout.appendRow(RowSpec.decode("5dlu"));
-        row++;
-        
-        layout.appendRow(RowSpec.decode("p"));
         panel.add(status, cc.xyw(2, row++,width));
         layout.appendRow(RowSpec.decode("p"));
         panel.add(makeTitle(Messages.getString("ColumnEditPanel.logicalName")), cc.xyw(2, row++, width)); //$NON-NLS-1$
@@ -420,19 +344,6 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
         row++;
         
         layout.appendRow(RowSpec.decode("p"));
-        cb = new JCheckBox();
-        if (cols.size() > 1) {
-            panel.add(cb, cc.xy(1, row));
-        }
-        panel.add(colInPK = new JCheckBox(Messages.getString("ColumnEditPanel.inPrimaryKey")), cc.xyw(2, row++, width)); //$NON-NLS-1$        
-        componentEnabledMap.put(colInPK, cb);
-        colInPK.addActionListener(this);
-        colInPK.addActionListener(checkboxEnabler);
-        
-        layout.appendRow(RowSpec.decode("5dlu"));
-        row++;
-
-        layout.appendRow(RowSpec.decode("p"));
         panel.add(makeTitle(Messages.getString("ColumnEditPanel.type")), cc.xyw(2, row++, width)); //$NON-NLS-1$
         layout.appendRow(RowSpec.decode("p"));
         cb = new JCheckBox();
@@ -440,15 +351,13 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
             panel.add(cb, cc.xy(1, row));
         }
         
-        typeChooserButton = new JButton(Messages.getString("ColumnEditPanel.chooseType"));
-        
         if (session.isEnterpriseSession()) {
             colType = new JTree(new SQLTypeTreeModel(
                     session.getEnterpriseSession()));
         } else {
             colType = new JTree(new SQLTypeTreeModel(session));
         }
-        
+
         colType.setCellRenderer(new SQLTypeTreeCellRenderer());
         for (int i = 0; i < colType.getRowCount(); i++) {
             colType.expandRow(i);
@@ -457,9 +366,89 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
         colType.setShowsRootHandles(true);
         colType.getSelectionModel().setSelectionMode(
                 TreeSelectionModel.SINGLE_TREE_SELECTION);
-        
-        typeChooserButton.setAction(
-                new PopupJTreeAction(panel, colType, typeChooserButton, UserDefinedSQLType.class));
+
+        // Collect all available types from the (now fully expanded) tree
+        for (int i = 0; i < colType.getRowCount(); i++) {
+            Object node = colType.getPathForRow(i).getLastPathComponent();
+            if (node instanceof UserDefinedSQLType) {
+                allTypes.add((UserDefinedSQLType) node);
+            }
+        }
+
+        // Autocomplete type field
+        typeChooserButton = new JTextField();
+        typeChooserButton.setToolTipText("Type to filter available SQL types");
+
+        typeDropList = new JList<>();
+        typeDropList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        typeDropList.setListData(allTypes.toArray(new UserDefinedSQLType[0]));
+
+        JScrollPane typeDropScroll = new JScrollPane(typeDropList);
+        typeDropScroll.setPreferredSize(new Dimension(250, 160));
+
+        typePopup = new JPopupMenu();
+        typePopup.add(typeDropScroll);
+        typePopup.setFocusable(false);
+
+        typeChooserButton.getDocument().addDocumentListener(new DocumentListener() {
+            public void insertUpdate(DocumentEvent e) { filterTypes(); }
+            public void removeUpdate(DocumentEvent e) { filterTypes(); }
+            public void changedUpdate(DocumentEvent e) { filterTypes(); }
+            private void filterTypes() {
+                if (updatingTypeField) return;
+                String query = typeChooserButton.getText().trim().toLowerCase();
+                List<UserDefinedSQLType> filtered = new ArrayList<>();
+                for (UserDefinedSQLType t : allTypes) {
+                    if (t.getName().toLowerCase().contains(query)) {
+                        filtered.add(t);
+                    }
+                }
+                typeDropList.setListData(filtered.toArray(new UserDefinedSQLType[0]));
+                if (!filtered.isEmpty()) {
+                    typeDropList.setSelectedIndex(0);
+                    if (!typePopup.isVisible()) {
+                        int w = Math.max(typeChooserButton.getWidth(), 250);
+                        typeDropScroll.setPreferredSize(new Dimension(w, 160));
+                        typePopup.pack();
+                        typePopup.show(typeChooserButton, 0, typeChooserButton.getHeight());
+                    }
+                } else {
+                    typePopup.setVisible(false);
+                }
+            }
+        });
+
+        typeChooserButton.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                int size = typeDropList.getModel().getSize();
+                if (size == 0) return;
+                if (e.getKeyCode() == KeyEvent.VK_DOWN) {
+                    int next = Math.min(typeDropList.getSelectedIndex() + 1, size - 1);
+                    typeDropList.setSelectedIndex(next);
+                    typeDropList.ensureIndexIsVisible(next);
+                    e.consume();
+                } else if (e.getKeyCode() == KeyEvent.VK_UP) {
+                    int prev = Math.max(typeDropList.getSelectedIndex() - 1, 0);
+                    typeDropList.setSelectedIndex(prev);
+                    typeDropList.ensureIndexIsVisible(prev);
+                    e.consume();
+                } else if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    selectTypeFromDropList();
+                    e.consume();
+                } else if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                    typePopup.setVisible(false);
+                    e.consume();
+                }
+            }
+        });
+
+        typeDropList.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                selectTypeFromDropList();
+            }
+        });
 
         componentEnabledMap.put(colType, cb);
         panel.add(typeChooserButton, cc.xyw(2, row++, 2));
@@ -571,8 +560,22 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
             }
         });
         colAutoInc.setEnabled(false);
-        
-        layout.appendRow(RowSpec.decode("5dlu"));
+
+        layout.appendRow(RowSpec.decode("3dlu"));
+        row++;
+
+        layout.appendRow(RowSpec.decode("p"));
+        cb = new JCheckBox();
+        if (cols.size() > 1) {
+            panel.add(cb, cc.xy(1, row));
+        }
+        panel.add(colInPK = new JCheckBox(), cc.xy(2, row));
+        panel.add(makeTitle(Messages.getString("ColumnEditPanel.inPrimaryKey")), cc.xyw(3, row++, width - 2)); //$NON-NLS-1$
+        componentEnabledMap.put(colInPK, cb);
+        colInPK.addActionListener(this);
+        colInPK.addActionListener(checkboxEnabler);
+
+        layout.appendRow(RowSpec.decode("3dlu"));
         row++;
 
         layout.appendRow(RowSpec.decode("p"));
@@ -631,6 +634,33 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
         colPhysicalName.getDocument().addDocumentListener(listener);
         colLogicalName.getDocument().addDocumentListener(listener);
 
+        // Auto-configure column when name is "id"
+        colLogicalName.getDocument().addDocumentListener(new DocumentListener() {
+            public void changedUpdate(DocumentEvent e) { applyIdDefaults(); }
+            public void insertUpdate(DocumentEvent e) { applyIdDefaults(); }
+            public void removeUpdate(DocumentEvent e) { applyIdDefaults(); }
+            private void applyIdDefaults() {
+                if (!"id".equalsIgnoreCase(colLogicalName.getText().trim())) return;
+                // Select BIGINT in the type tree
+                for (int i = 0; i < colType.getRowCount(); i++) {
+                    Object node = colType.getPathForRow(i).getLastPathComponent();
+                    if (node instanceof UserDefinedSQLType &&
+                            "BIGINT".equalsIgnoreCase(((UserDefinedSQLType) node).getName())) {
+                        colType.setSelectionRow(i);
+                        componentEnabledMap.get(colType).setSelected(true);
+                        break;
+                    }
+                }
+                // Set as primary key
+                colInPK.setSelected(true);
+                componentEnabledMap.get(colInPK).setSelected(true);
+                // Set not null
+                colNullable.setSelectedItem(YesNoEnum.NO);
+                typeOverrideMap.get(colNullable).setSelected(true);
+                colNullable.setEnabled(true);
+            }
+        });
+
         // Listener to rediscover the sequence naming convention, and reset the
         // sequence name to its original (according to the column's own sequence
         // name) naming convention when the user clears the sequence name field
@@ -673,6 +703,98 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
         colRemarks.setRows(5);
         colRemarks.setLineWrap(true);
         colRemarks.setWrapStyleWord(true);
+
+        layout.appendRow(RowSpec.decode("5dlu"));
+        row++;
+
+        layout.appendRow(RowSpec.decode("p"));
+        panel.add(makeTitle(Messages.getString("ColumnEditPanel.source")), cc.xyw(2, row++, width)); //$NON-NLS-1$
+        layout.appendRow(RowSpec.decode("p"));
+        
+        cb = new JCheckBox();
+        if (cols.size() > 1) {
+            panel.add(cb, cc.xy(1, row));
+        }
+        
+        colSourceTree = new JTree();
+        DBTreeModel sourceTreeModel = new DBTreeModel(session.getRootObject(), colSourceTree, false, true, false, false, false) {
+            @Override
+            public Object getChild(Object parent, int index) {
+                if (parent == sourceNotSpecifiedTreeNode) {
+                    return null;
+                } else if (parent == getRoot()) {
+                    if (index == 0) {
+                        return sourceNotSpecifiedTreeNode;
+                    } else {
+                        return super.getChild(parent, index - 1);
+                    }
+                } else {
+                    return super.getChild(parent, index);
+                }
+            }
+            @Override
+            public int getChildCount(Object parent) {
+                if (parent == sourceNotSpecifiedTreeNode) {
+                    return 0;
+                } else if (parent == getRoot()) {
+                    return super.getChildCount(parent) + 1;
+                } else {
+                    return super.getChildCount(parent);
+                }
+            }
+            @Override
+            public int getIndexOfChild(Object parent, Object child) {
+                if (parent == sourceNotSpecifiedTreeNode) {
+                    return -1;
+                } else if (child == sourceNotSpecifiedTreeNode) {
+                    return 0;
+                } else if (parent == getRoot()) {
+                    int index = super.getIndexOfChild(parent, child);
+                    if (index != -1) {
+                        return index + 1;
+                    } else {
+                        return -1;
+                    }
+                } else {
+                    return super.getIndexOfChild(parent, child);
+                }
+            }
+            @Override
+            public boolean isLeaf(Object parent) {
+                if (parent == sourceNotSpecifiedTreeNode) {
+                    return true;
+                } else {
+                   return super.isLeaf(parent);
+                }
+            }
+            
+        };
+        colSourceTree.setModel(sourceTreeModel);
+        colSourceTree.setRootVisible(false);
+        colSourceTree.setShowsRootHandles(true);
+        colSourceTree.setCellRenderer(new DBTreeCellRenderer() {
+            @Override
+            public Component getTreeCellRendererComponent(JTree tree, Object value, boolean sel, boolean expanded,
+                    boolean leaf, int row, boolean hasFocus) {
+                super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus);
+                if (!sel && value == sourceNotSpecifiedTreeNode) {
+                    setForeground(getTextNonSelectionColor());
+                }
+                return this;
+            }
+        });
+        colSourceTree.getSelectionModel().setSelectionMode(
+                TreeSelectionModel.SINGLE_TREE_SELECTION);
+        
+        colSourceButton = new JButton();
+        colSourceButton.setAction(new PopupJTreeAction(panel, colSourceTree, colSourceButton, SQLColumn.class));
+        
+        panel.add(colSourceButton, cc.xyw(2, row++, 5));
+        componentEnabledMap.put(colSourceTree, cb);
+        
+        layout.appendRow(RowSpec.decode("5dlu"));
+        row++;
+        
 
         // start with all components enabled; if there are multiple columns
         // to edit, these checkboxes will be turned off selectively for the
@@ -736,19 +858,36 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
         colType.addTreeSelectionListener(new TreeSelectionListener() {
             public void valueChanged(TreeSelectionEvent e) {
                 TreePath path = e.getNewLeadSelectionPath();
+                updatingTypeField = true;
                 if (path != null) {
                     Object selection = path.getLastPathComponent();
                     if (selection instanceof UserDefinedSQLType) {
                         typeChooserButton.setText(((UserDefinedSQLType) selection).getName());
                         updateSQLTypeComponents((UserDefinedSQLType) selection, false);
                     } else {
-                        typeChooserButton.setText(Messages.getString("ColumnEditPanel.chooseType"));
+                        typeChooserButton.setText("");
                     }
                 } else {
-                    typeChooserButton.setText(Messages.getString("ColumnEditPanel.chooseType"));
+                    typeChooserButton.setText("");
                 }
+                updatingTypeField = false;
+                typePopup.setVisible(false);
             }
         });
+    }
+
+    private void selectTypeFromDropList() {
+        UserDefinedSQLType selected = typeDropList.getSelectedValue();
+        if (selected == null) return;
+        for (int i = 0; i < colType.getRowCount(); i++) {
+            if (colType.getPathForRow(i).getLastPathComponent() == selected) {
+                colType.setSelectionRow(i);
+                componentEnabledMap.get(colType).setSelected(true);
+                break;
+            }
+        }
+        typePopup.setVisible(false);
+        typeChooserButton.requestFocusInWindow();
     }
 
     private Component makeTitle(String string) {
@@ -802,8 +941,10 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
         
         updateComponent(colType, col.getUserDefinedSQLType().getUpstreamType());
         if (!colType.isSelectionEmpty()) {
+            updatingTypeField = true;
             typeChooserButton.setText(
                     ((UserDefinedSQLType) col.getUserDefinedSQLType().getUpstreamType()).getName());
+            updatingTypeField = false;
         } else {
             colSourceButton.setText(Messages.getString("ColumnEditPanel.noneSpecified"));
         }
@@ -998,13 +1139,13 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
                 }
                 
                 if (componentEnabledMap.get(colPhysicalName).isSelected()) {
-                    column.setPhysicalName(colPhysicalName.getText());
+                    column.setPhysicalName(colPhysicalName.getText().toLowerCase());
                 }                
                 if (componentEnabledMap.get(colLogicalName).isSelected()) {
                     if (colLogicalName.getText().trim().length() == 0) {
                         errors.add(Messages.getString("ColumnEditPanel.columnNameRequired")); //$NON-NLS-1$
                     } else {
-                        column.setName(colLogicalName.getText());
+                        column.setName(colLogicalName.getText().toLowerCase());
                     }
                 }
                 if (componentEnabledMap.get(colType).isSelected()) {

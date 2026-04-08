@@ -31,6 +31,8 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 
 import org.apache.log4j.Logger;
 
@@ -112,6 +114,19 @@ public class TableEditPanel extends ChangeListeningDataEntryPanel {
         panel.add(rounded = new JCheckBox());
         
 		editTable(t);
+
+		logicalName.getDocument().addDocumentListener(new DocumentListener() {
+		    public void insertUpdate(DocumentEvent e) { sync(); }
+		    public void removeUpdate(DocumentEvent e) { sync(); }
+		    public void changedUpdate(DocumentEvent e) { sync(); }
+		    private void sync() {
+		        String name = logicalName.getText().toLowerCase();
+		        physicalName.setText(name);
+		        if (pkName.isEnabled()) {
+		            pkName.setText(name + "_pk");
+		        }
+		    }
+		});
 	}
 
     private void editTable(SQLTable t) {
@@ -154,8 +169,8 @@ public class TableEditPanel extends ChangeListeningDataEntryPanel {
 	            table.getPrimaryKeyIndex().setName(pkName.getText());
 	        }
 
-	        table.setPhysicalName(physicalName.getText());
-	        table.setName(logicalName.getText());
+	        table.setPhysicalName(physicalName.getText().toLowerCase());
+	        table.setName(logicalName.getText().toLowerCase());
 	        table.setRemarks(remarks.getText());   
 
 	        if (tablePane != null) {

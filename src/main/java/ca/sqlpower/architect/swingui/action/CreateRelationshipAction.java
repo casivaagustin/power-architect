@@ -64,9 +64,9 @@ public class CreateRelationshipAction extends AbstractArchitectAction
               identifying ? "new_id_relationship" : "new_nonid_relationship"); //$NON-NLS-1$ //$NON-NLS-2$
         
 		if (identifying) {
-			putValue(ACCELERATOR_KEY,KeyStroke.getKeyStroke(KeyEvent.VK_R,0));
+			putValue(ACCELERATOR_KEY,KeyStroke.getKeyStroke(KeyEvent.VK_I,0));
 		} else {
-			putValue(ACCELERATOR_KEY,KeyStroke.getKeyStroke(KeyEvent.VK_R,KeyEvent.SHIFT_MASK));
+			putValue(ACCELERATOR_KEY,KeyStroke.getKeyStroke(KeyEvent.VK_N,0));
 		}
 		this.identifying = identifying;
 		logger.debug("(constructor) hashcode is: " + super.hashCode()); //$NON-NLS-1$

@@ -51,9 +51,12 @@ import java.awt.event.ActionEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import java.awt.event.MouseWheelEvent;
+import java.awt.event.MouseWheelListener;
 import java.awt.font.FontRenderContext;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
@@ -645,7 +648,14 @@ public class PlayPen extends JPanel
 		ppMouseListener = new PPMouseListener();
 		this.addMouseListener(ppMouseListener);
 		this.addMouseMotionListener(ppMouseListener);
-		
+		this.addMouseWheelListener(new MouseWheelListener() {
+		    public void mouseWheelMoved(MouseWheelEvent e) {
+		        if ((e.getModifiersEx() & MouseWheelEvent.CTRL_DOWN_MASK) != 0) {
+		            double factor = e.getWheelRotation() < 0 ? 1.1 : (1.0 / 1.1);
+		            setZoom(Math.max(0.1, Math.min(10.0, getZoom() * factor)));
+		        }
+		    }
+		});
 		cursorManager = new CursorManager(this);
 		fontRenderContext = null;
 	}
@@ -842,6 +852,20 @@ public class PlayPen extends JPanel
                         } catch (SQLObjectException ex) {
                             throw new SQLObjectRuntimeException(ex);
                         }
+                    }
+                }
+            }
+        });
+
+        final Object KEY_EDIT_SELECTED = "ca.sqlpower.architect.PlayPen.KEY_EDIT_SELECTED"; //$NON-NLS-1$
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_E, 0), KEY_EDIT_SELECTED);
+        this.getActionMap().put(KEY_EDIT_SELECTED, new AbstractAction() {
+            public void actionPerformed(ActionEvent e) {
+                List<PlayPenComponent> items = getSelectedItems();
+                if (items.size() == 1 && items.get(0) instanceof TablePane) {
+                    TablePane tp = (TablePane) items.get(0);
+                    if (tp.getSelectedItemIndex() >= 0) {
+                        session.getArchitectFrame().getEditSelectedAction().actionPerformed(e);
                     }
                 }
             }
@@ -2480,6 +2504,11 @@ public class PlayPen extends JPanel
 		 * resizing the rubber band in response to user input.
 		 */
 		protected Point rubberBandOrigin;
+
+		/** Pan-by-drag state: screen point where Ctrl+drag started. */
+		private Point panDragOrigin;
+		/** Pan-by-drag state: viewport position when Ctrl+drag started. */
+		private Point panViewOrigin;
 		// ------------------- MOUSE LISTENER INTERFACE ------------------
 
 		public void mouseEntered(MouseEvent evt) {
@@ -2508,6 +2537,11 @@ public class PlayPen extends JPanel
 
 		public void mousePressed(MouseEvent evt) {
 		    requestFocus();
+		    if ((evt.getModifiersEx() & MouseEvent.CTRL_DOWN_MASK) != 0) {
+		        panDragOrigin = evt.getPoint();
+		        panViewOrigin = getViewPosition();
+		        return;
+		    }
 			Point p = evt.getPoint();
 			unzoomPoint(p);
 			PlayPenComponent c = contentPane.getComponentAt(p);
@@ -2527,7 +2561,12 @@ public class PlayPen extends JPanel
 		}
 
 		public void mouseReleased(MouseEvent evt) {
-		   	
+		    if (panDragOrigin != null) {
+		        panDragOrigin = null;
+		        panViewOrigin = null;
+		        return;
+		    }
+
 		    draggingContainerPanes = false;
             selectionInProgress = false;
 
@@ -2553,9 +2592,16 @@ public class PlayPen extends JPanel
 		// ---------------- MOUSEMOTION LISTENER INTERFACE -----------------
 		public void mouseDragged(MouseEvent evt) {
 			mouseMoved(evt);
-		}	
+		}
 
 		public void mouseMoved(MouseEvent evt) {
+		    if (panDragOrigin != null) {
+		        int dx = evt.getX() - panDragOrigin.x;
+		        int dy = evt.getY() - panDragOrigin.y;
+		        Point newPos = new Point(Math.max(0, panViewOrigin.x - dx), Math.max(0, panViewOrigin.y - dy));
+		        setViewPosition(newPos);
+		        return;
+		    }
 			if (rubberBand != null) {
 				// repaint old region in case of shrinkage
 				Rectangle dirtyRegion = zoomRect(new Rectangle(rubberBand));
