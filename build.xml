@@ -74,6 +74,11 @@
 	<property name="installer.dir" value="installer"/>
 	
 	<property name="only.copy.sqlpower.library" value="false"/>
+
+	<!-- GitHub repository for sqlpower-library -->
+	<property name="sqlpower.library.repo" value="https://github.com/casivaagustin/sqlpower-library"/>
+	<!-- Default local path; override with -Dsqlpower.library.home=... if needed -->
+	<property name="sqlpower.library.home" value="../sqlpower-library"/>
 	
 	<property name="junit.jar" location="${lib}/junit-4.12.jar"/>
     <property name="hamcrest.jar" location="${lib}/hamcrest-core-1.3.jar"/>
@@ -1541,12 +1546,34 @@
 		This build target checks for the sqlpower-library project, which is
 		required by the Power*Architect to build. 
 	-->
-	<target name="check.sqlpower.library.dir">
+	<!--
+		Clones sqlpower-library from GitHub if the local directory does not exist.
+	-->
+	<target name="fetch.sqlpower.library">
+		<echo message="Checking for sqlpower-library at ${sqlpower.library.home}..."/>
+		<condition property="sqlpower.library.missing">
+			<not>
+				<available file="${sqlpower.library.home}" type="dir"/>
+			</not>
+		</condition>
+		<antcall target="clone.sqlpower.library"/>
+	</target>
+
+	<target name="clone.sqlpower.library" if="sqlpower.library.missing">
+		<echo message="sqlpower-library not found. Cloning from ${sqlpower.library.repo}..."/>
+		<exec executable="git" failonerror="true">
+			<arg value="clone"/>
+			<arg value="${sqlpower.library.repo}"/>
+			<arg value="${sqlpower.library.home}"/>
+		</exec>
+	</target>
+
+	<target name="check.sqlpower.library.dir" depends="fetch.sqlpower.library">
 		<echo message="Checking for sqlpower-library project..."/>
-		<fail message="Can't find sqlpower-library project! Set the property 'sqlpower.library.home' to point to the sqlpower-library project directory">
+		<fail message="Can't find sqlpower-library project at '${sqlpower.library.home}'. Clone failed or set -Dsqlpower.library.home manually.">
 			<condition>
 				<not>
-					<isset property="sqlpower.library.home"/>
+					<available file="${sqlpower.library.home}" type="dir"/>
 				</not>
 			</condition>
 		</fail>
