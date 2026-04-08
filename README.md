@@ -68,22 +68,9 @@ sdk install ant
 
 This installs the latest Ant version (1.10+), which satisfies the 1.7+ requirement.
 
-### 4. Pin versions for this project
+From this point on, running `sdk env` in the project directory will switch to the pinned versions automatically. 
 
-From the project root, create an `.sdkmanrc` file to lock the versions used in this project:
-
-```bash
-sdk env init
-```
-
-Then edit `.sdkmanrc` to set the correct versions, for example:
-
-```
-java=11.0.23-tem
-ant=1.10.14
-```
-
-From this point on, running `sdk env` in the project directory will switch to the pinned versions automatically. To activate on every `cd`, add this to your shell config:
+To activate on every `cd`, add this to your shell config:
 
 ```bash
 # ~/.bashrc or ~/.zshrc
