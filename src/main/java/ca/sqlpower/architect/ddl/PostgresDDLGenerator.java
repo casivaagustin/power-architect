@@ -36,6 +36,7 @@ import ca.sqlpower.sqlobject.SQLObject;
 import ca.sqlpower.sqlobject.SQLObjectException;
 import ca.sqlpower.sqlobject.SQLSequence;
 import ca.sqlpower.sqlobject.SQLTable;
+import ca.sqlpower.sqlobject.SQLType;
 import ca.sqlpower.sqlobject.SQLIndex.AscendDescend;
 
 /**
@@ -49,6 +50,20 @@ public class PostgresDDLGenerator extends GenericDDLGenerator {
 
 	public static final String GENERATOR_VERSION = "$Revision$";
 	private static final Logger logger = Logger.getLogger(PostgresDDLGenerator.class);
+
+	// PostGIS geometry type codes (PostgreSQL-specific, no JDBC standard equivalent)
+	public static final int GEOMETRY            = -300;
+	public static final int GEOGRAPHY           = -301;
+	public static final int POINT               = -302;
+	public static final int LINESTRING          = -303;
+	public static final int POLYGON             = -304;
+	public static final int MULTIPOINT          = -305;
+	public static final int MULTILINESTRING     = -306;
+	public static final int MULTIPOLYGON        = -307;
+	public static final int GEOMETRYCOLLECTION  = -308;
+	public static final int BOX2D               = -309;
+	public static final int BOX3D               = -310;
+	public static final int RASTER              = -311;
 
     /**
      * These words are the words reserved by PostgreSQL and cannot be used as a
@@ -196,6 +211,25 @@ public class PostgresDDLGenerator extends GenericDDLGenerator {
 		typeMap.put(Integer.valueOf(Types.TINYINT), new GenericTypeDescriptor("SMALLINT", Types.TINYINT, 16, null, null, DatabaseMetaData.columnNullable, false, false));
 		typeMap.put(Integer.valueOf(Types.VARBINARY), new GenericTypeDescriptor("BYTEA", Types.VARBINARY, 4000000000L, null, null, DatabaseMetaData.columnNullable, false, false));
 		typeMap.put(Integer.valueOf(Types.VARCHAR), new GenericTypeDescriptor("VARCHAR", Types.VARCHAR, 4000000000L, "'", "'", DatabaseMetaData.columnNullable, true, false));
+
+		// JSON types (SQL:2016 / PostgreSQL native)
+		typeMap.put(Integer.valueOf(SQLType.JSON),     new GenericTypeDescriptor("JSON",     SQLType.JSON,     0, "'", "'", DatabaseMetaData.columnNullable, false, false));
+		typeMap.put(Integer.valueOf(SQLType.JSONB),    new GenericTypeDescriptor("JSONB",    SQLType.JSONB,    0, "'", "'", DatabaseMetaData.columnNullable, false, false));
+		typeMap.put(Integer.valueOf(SQLType.JSONPATH), new GenericTypeDescriptor("JSONPATH", SQLType.JSONPATH, 0, "'", "'", DatabaseMetaData.columnNullable, false, false));
+
+		// PostGIS geometry types
+		typeMap.put(Integer.valueOf(GEOMETRY),           new GenericTypeDescriptor("GEOMETRY",           GEOMETRY,           0, null, null, DatabaseMetaData.columnNullable, false, false));
+		typeMap.put(Integer.valueOf(GEOGRAPHY),          new GenericTypeDescriptor("GEOGRAPHY",          GEOGRAPHY,          0, null, null, DatabaseMetaData.columnNullable, false, false));
+		typeMap.put(Integer.valueOf(POINT),              new GenericTypeDescriptor("POINT",              POINT,              0, null, null, DatabaseMetaData.columnNullable, false, false));
+		typeMap.put(Integer.valueOf(LINESTRING),         new GenericTypeDescriptor("LINESTRING",         LINESTRING,         0, null, null, DatabaseMetaData.columnNullable, false, false));
+		typeMap.put(Integer.valueOf(POLYGON),            new GenericTypeDescriptor("POLYGON",            POLYGON,            0, null, null, DatabaseMetaData.columnNullable, false, false));
+		typeMap.put(Integer.valueOf(MULTIPOINT),         new GenericTypeDescriptor("MULTIPOINT",         MULTIPOINT,         0, null, null, DatabaseMetaData.columnNullable, false, false));
+		typeMap.put(Integer.valueOf(MULTILINESTRING),    new GenericTypeDescriptor("MULTILINESTRING",    MULTILINESTRING,    0, null, null, DatabaseMetaData.columnNullable, false, false));
+		typeMap.put(Integer.valueOf(MULTIPOLYGON),       new GenericTypeDescriptor("MULTIPOLYGON",       MULTIPOLYGON,       0, null, null, DatabaseMetaData.columnNullable, false, false));
+		typeMap.put(Integer.valueOf(GEOMETRYCOLLECTION), new GenericTypeDescriptor("GEOMETRYCOLLECTION", GEOMETRYCOLLECTION, 0, null, null, DatabaseMetaData.columnNullable, false, false));
+		typeMap.put(Integer.valueOf(BOX2D),              new GenericTypeDescriptor("BOX2D",              BOX2D,              0, null, null, DatabaseMetaData.columnNullable, false, false));
+		typeMap.put(Integer.valueOf(BOX3D),              new GenericTypeDescriptor("BOX3D",              BOX3D,              0, null, null, DatabaseMetaData.columnNullable, false, false));
+		typeMap.put(Integer.valueOf(RASTER),             new GenericTypeDescriptor("RASTER",             RASTER,             0, null, null, DatabaseMetaData.columnNullable, false, false));
 	}
 
 	/**

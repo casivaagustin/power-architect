@@ -100,10 +100,20 @@ public class ProjectLoader {
     private static void LoadSQLObjectAttributes(SQLObject obj, Attributes attr) {
         String message = attr.getValue("sql-exception");
         if (message != null) {
+            // Strip the exception class prefix that gets serialised by Throwable.toString()
+            // (e.g. "ca.sqlpower.sqlobject.SQLObjectException: Failed to …" → "Failed to …")
+            // so the stored message is not double-wrapped on reload.
+            String prefix = SQLObjectException.class.getName() + ": ";
+            if (message.startsWith(prefix)) {
+                message = message.substring(prefix.length());
+            }
             try {
                 obj.setChildrenInaccessibleReason(new SQLObjectException(message), SQLObject.class, false);
-            } catch (SQLObjectException e) {
-                throw new AssertionError("Unreachable code");
+            } catch (Throwable e) {
+                // setChildrenInaccessibleReason can throw in some edge cases (e.g. listener
+                // interaction during load).  Log and continue — the project should still open.
+                logger.warn("Could not restore inaccessible-reason for object '" + obj.getName()
+                        + "': " + e.getMessage());
             }
         }
     }

@@ -91,7 +91,7 @@ implements DragSourceListener, LayoutNode {
     /**
      * How many pixels should be left between the surrounding box and the item name labels.
      */
-    protected Insets margin = new Insets(1,1,1,1);
+    protected Insets margin = new Insets(1, 8, 1, 8);
 
     /**
      * Tracks which items in this container are currently selected.

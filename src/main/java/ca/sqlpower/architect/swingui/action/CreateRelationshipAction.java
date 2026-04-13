@@ -36,6 +36,7 @@ import ca.sqlpower.architect.swingui.TablePane;
 import ca.sqlpower.architect.swingui.PlayPen.CancelableListener;
 import ca.sqlpower.architect.swingui.event.SelectionEvent;
 import ca.sqlpower.architect.swingui.event.SelectionListener;
+import ca.sqlpower.sqlobject.SQLColumn;
 import ca.sqlpower.sqlobject.SQLObjectException;
 import ca.sqlpower.sqlobject.SQLRelationship;
 import ca.sqlpower.sqlobject.SQLTable;
@@ -88,12 +89,12 @@ public class CreateRelationshipAction extends AbstractArchitectAction
 	}
 
 	static public void doCreateRelationship(SQLTable pkTable, SQLTable fkTable, PlayPen pp, boolean identifying) {
-	    ArchitectSwingProject project = pp.getSession().getWorkspace(); 
+	    ArchitectSwingProject project = pp.getSession().getWorkspace();
 		try {
 		    project.begin("Adding relationship");
 			pp.startCompoundEdit("Add Relationship"); //$NON-NLS-1$
 			SQLRelationship model = SQLRelationship.createRelationship(pkTable, fkTable, identifying);
-			
+
 			Relationship r = new Relationship(model, pp.getContentPane());
 			pp.addRelationship(r);
 			r.revalidate();
@@ -103,11 +104,51 @@ public class CreateRelationshipAction extends AbstractArchitectAction
 			ASUtils.showExceptionDialogNoReport(pp, Messages.getString("CreateRelationshipAction.couldNotCreateRelationship"), ex); //$NON-NLS-1$
 			project.rollback("Couldn't create relationship");
 		} catch (Throwable e) {
-		    project.rollback("Couldn't create relationship");		    
+		    project.rollback("Couldn't create relationship");
 		    throw new RuntimeException(e);
 		} finally {
 			pp.endCompoundEdit("Ending the creation of a relationship"); //$NON-NLS-1$
 		}
+	}
+
+	/**
+	 * Creates a relationship from pkTable to fkTable, mapping the FK side to
+	 * a specific existing column instead of auto-generating one.  Called when
+	 * the user Ctrl+clicks a column in the FK table while relationship creation
+	 * is in progress.
+	 */
+	static public void doCreateRelationshipToColumn(SQLTable pkTable, SQLTable fkTable,
+			SQLColumn fkColumn, PlayPen pp, boolean identifying) {
+	    ArchitectSwingProject project = pp.getSession().getWorkspace();
+		try {
+		    project.begin("Adding relationship to existing column");
+			pp.startCompoundEdit("Add Relationship"); //$NON-NLS-1$
+			SQLRelationship model = SQLRelationship.createRelationshipToColumn(pkTable, fkTable, fkColumn, identifying);
+
+			Relationship r = new Relationship(model, pp.getContentPane());
+			pp.addRelationship(r);
+			r.revalidate();
+			project.commit();
+		} catch (SQLObjectException ex) {
+			logger.error("Couldn't create relationship to column", ex); //$NON-NLS-1$
+			ASUtils.showExceptionDialogNoReport(pp, Messages.getString("CreateRelationshipAction.couldNotCreateRelationship"), ex); //$NON-NLS-1$
+			project.rollback("Couldn't create relationship to column");
+		} catch (Throwable e) {
+		    project.rollback("Couldn't create relationship to column");
+		    throw new RuntimeException(e);
+		} finally {
+			pp.endCompoundEdit("Ending the creation of a relationship"); //$NON-NLS-1$
+		}
+	}
+
+	/** Returns the PK-side table pane selected so far, or null if none yet. */
+	public TablePane getPkTablePane() {
+		return pkTable;
+	}
+
+	/** Returns whether this action creates identifying relationships. */
+	public boolean isIdentifying() {
+		return identifying;
 	}
 
     public void itemSelected(SelectionEvent e) {

@@ -61,6 +61,7 @@ import javax.swing.tree.TreePath;
 import org.apache.log4j.Logger;
 
 import ca.sqlpower.architect.swingui.action.DataSourcePropertiesAction;
+import ca.sqlpower.architect.swingui.event.SelectionEvent;
 import ca.sqlpower.architect.swingui.action.DatabaseConnectionManagerAction;
 import ca.sqlpower.architect.swingui.action.NewDataSourceAction;
 import ca.sqlpower.architect.swingui.action.RefreshAction;
@@ -177,12 +178,14 @@ public class DBTree extends JTree implements DragSourceListener {
             public void mouseReleased(MouseEvent e) {
                 if (getPathForLocation(e.getX(), e.getY()) != null) {
                     Object node = getPathForLocation(e.getX(), e.getY()).getLastPathComponent();
-                    if (e.getClickCount() == 2 && node instanceof SQLObject && 
+                    if (e.getClickCount() == 2 && node instanceof SQLObject &&
                             !((SQLObject) node).getChildrenInaccessibleReasons().isEmpty()) {
                         Throwable firstException = ((SQLObject) node).
                             getChildrenInaccessibleReasons().entrySet().iterator().next().getValue();
                         SPSUtils.showExceptionDialogNoReport(session.getArchitectFrame(),
                                 Messages.getString("DBTree.exceptionNodeReport"), firstException); //$NON-NLS-1$
+                    } else if (e.getClickCount() == 2 && node instanceof SQLTable) {
+                        focusPlayPenOnTable((SQLTable) node);
                     }
                 }
             }
@@ -1149,6 +1152,24 @@ public class DBTree extends JTree implements DragSourceListener {
         return treeCellRenderer;
     }
     
+    /**
+     * Finds the TablePane in the PlayPen that corresponds to the given SQLTable,
+     * selects it, and scrolls the PlayPen to make it visible.  Does nothing if
+     * the table has no corresponding pane (e.g. it lives in a source database
+     * that has not been placed on the canvas).
+     */
+    private void focusPlayPenOnTable(SQLTable table) {
+        PlayPen pp = session.getPlayPen();
+        for (PlayPenComponent ppc : pp.getContentPane().getChildren()) {
+            if (ppc instanceof TablePane && ((TablePane) ppc).getModel() == table) {
+                pp.selectNone();
+                ppc.setSelected(true, SelectionEvent.SINGLE_SELECT);
+                pp.showSelected();
+                return;
+            }
+        }
+    }
+
     protected class ShowInPlayPenAction extends AbstractAction {
         public ShowInPlayPenAction() {
             super(Messages.getString("DBTree.showInPlaypenAction")); //$NON-NLS-1$

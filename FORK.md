@@ -52,8 +52,20 @@ All table names are saved in **lowercase**.
 
 When a relationship is created from **Table A** to **Table B**, the foreign key column in Table B is automatically named `<table_a_name>_id`.
 
+- If the source table name is **plural**, it is automatically converted to **singular** before building the column name.
 - If a column with that name and matching type already exists in Table B, it is **reused** rather than duplicated.
-- Example: a relationship from `order` → `customer` creates/reuses a column called `order_id` in `customer`.
+- Examples:
+  - `orders` → `customer` creates `order_id` (plural → singular)
+  - `categories` → `product` creates `category_id` (ies → y)
+  - `matches` → `player` creates `match_id` (ches → ch)
+  - `order` → `customer` creates `order_id` (already singular, unchanged)
+
+### Mapping to an Existing Column (Ctrl+click)
+
+After selecting the PK table (step 1 of `I`/`N`), you can **Ctrl+click a specific column** in Table B to connect the relationship to that exact existing field instead of auto-generating a new one.
+
+- **Normal click** on Table B → auto-generates (or reuses) the FK column by name.
+- **Ctrl+click on a column** in Table B → maps the relationship directly to that column, no new column is created.
 
 ---
 
@@ -96,11 +108,54 @@ While navigating a table with `↑`/`↓`, press `E` to open the column editor f
 
 ---
 
+## Table Browser Tree
+
+### Focus PlayPen on Double-click
+
+Double-clicking a table in the **table browser tree** (left panel) immediately scrolls and focuses the PlayPen canvas to that table, selecting it so it is visible.
+
+- If the table is not on the canvas (e.g. it belongs to a source database that was never placed), the double-click has no effect.
+
+---
+
 ## Canvas Navigation
 
 ### Zoom
 
 Hold **Ctrl** and scroll the **mouse wheel** to zoom in and out on the canvas.
+
+---
+
+## Supported Column Types (PostgreSQL)
+
+The PostgreSQL DDL generator includes the following types as built-in defaults, available without a live database connection.
+
+### JSON Types
+
+| Type | Description |
+|------|-------------|
+| `JSON` | Stores JSON text with validation |
+| `JSONB` | Binary JSON — indexed, faster queries |
+| `JSONPATH` | JSON path expression (PostgreSQL 12+) |
+
+### PostGIS Geometry Types
+
+| Type | Description |
+|------|-------------|
+| `GEOMETRY` | Generic geometry (base PostGIS type) |
+| `GEOGRAPHY` | Geodetic (spheroid-based) geometry |
+| `POINT` | Single 2D point |
+| `LINESTRING` | Sequence of points forming a line |
+| `POLYGON` | Closed ring(s) |
+| `MULTIPOINT` | Collection of points |
+| `MULTILINESTRING` | Collection of line strings |
+| `MULTIPOLYGON` | Collection of polygons |
+| `GEOMETRYCOLLECTION` | Heterogeneous collection of geometries |
+| `BOX2D` | 2D bounding box |
+| `BOX3D` | 3D bounding box |
+| `RASTER` | Raster data (PostGIS Raster extension) |
+
+All JSON and PostGIS types have no precision or scale — they are emitted as bare type names in generated DDL (e.g., `col JSONB`, `geom GEOMETRY`).
 
 ---
 

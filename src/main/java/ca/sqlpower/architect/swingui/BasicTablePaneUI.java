@@ -72,9 +72,14 @@ public class BasicTablePaneUI extends TablePaneUI implements java.io.Serializabl
 	public static final int GAP = 1;
 	
 	/**
-	 * The amount of extra (vertical) space between the PK columns and the non-PK columns. 
+	 * The amount of extra (vertical) space between the PK columns and the non-PK columns.
 	 */
 	public static final int PK_GAP = 10;
+
+	/**
+	 * Extra vertical padding added below each column row so rows are easier to scan.
+	 */
+	public static final int ROW_GAP = 4;
 	
 	/**
 	 * The width and height of the arc for a rounded rectangle table. 
@@ -224,14 +229,14 @@ public class BasicTablePaneUI extends TablePaneUI implements java.io.Serializabl
 			        if (logger.isDebugEnabled()) logger.debug("Column "+i+" is selected"); //$NON-NLS-1$ //$NON-NLS-2$
 			        g2.setColor(selectedColor);
 			        g2.fillRect(BOX_LINE_THICKNESS+tp.getMargin().left, y-ascent+fontHeight,
-			                hwidth, fontHeight);
+			                hwidth, fontHeight + ROW_GAP);
 			    }
 			    // draws the column
 			    currentColor = tp.getColumnHighlight(i);
 			    g2.setColor(currentColor == null ? Color.BLACK : currentColor);
 			    g2.drawString(columnText(col),
 			            BOX_LINE_THICKNESS+tp.getMargin().left,
-			            y += fontHeight);
+			            y += fontHeight + ROW_GAP);
 			    i++;
 			}
 			
@@ -266,16 +271,16 @@ public class BasicTablePaneUI extends TablePaneUI implements java.io.Serializabl
 			if (ip != ContainerPane.ITEM_INDEX_NONE) {
 			    y = GAP + BOX_LINE_THICKNESS + tp.getMargin().top + fontHeight;
 			    if (ip == TablePane.COLUMN_INDEX_END_OF_PK) {
-			        y += fontHeight * pkSize;
+			        y += (fontHeight + ROW_GAP) * pkSize;
 			    } else if (ip == TablePane.COLUMN_INDEX_START_OF_NON_PK) {
-			        y += fontHeight * pkSize + PK_GAP;
+			        y += (fontHeight + ROW_GAP) * pkSize + PK_GAP;
 			    } else if (ip < pkSize) {
 			        if (ip == ContainerPane.ITEM_INDEX_TITLE) {
 			            ip = 0;
-			        } 
-			        y += ip * fontHeight;
+			        }
+			        y += ip * (fontHeight + ROW_GAP);
 			    } else {
-				    y += ip * fontHeight + PK_GAP;
+				    y += ip * (fontHeight + ROW_GAP) + PK_GAP;
 				}
 			    paintInsertionPoint(g2, y, width);
 			}

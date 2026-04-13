@@ -115,6 +115,7 @@ import ca.sqlpower.architect.olap.MondrianModel.VirtualCube;
 import ca.sqlpower.architect.olap.MondrianModel.VirtualCubeDimension;
 import ca.sqlpower.architect.olap.MondrianModel.VirtualCubeMeasure;
 import ca.sqlpower.architect.swingui.action.CancelAction;
+import ca.sqlpower.architect.swingui.action.CreateRelationshipAction;
 import ca.sqlpower.architect.swingui.event.PlayPenLifecycleEvent;
 import ca.sqlpower.architect.swingui.event.PlayPenLifecycleListener;
 import ca.sqlpower.architect.swingui.event.SelectionEvent;
@@ -2551,6 +2552,10 @@ public class PlayPen extends JPanel
 		public void mousePressed(MouseEvent evt) {
 		    requestFocus();
 		    if (ctrlDown) {
+		        // When a relationship is being created and pkTable is already chosen,
+		        // Ctrl+click on a column in the FK table pins the relationship to that
+		        // specific existing column instead of panning the canvas.
+		        if (handleCtrlClickForRelationship(evt)) return;
 		        lastPanPos = evt.getPoint();
 		        return;
 		    }
@@ -2598,6 +2603,51 @@ public class PlayPen extends JPanel
 			maybeShowPopup(evt);
 			repaint();
 //            updateDBTree();
+		}
+
+		/**
+		 * If a relationship creation is in progress and the PK table has already
+		 * been chosen, intercepts a Ctrl+click on a column in the FK table and
+		 * creates the relationship mapped to that specific existing column.
+		 *
+		 * @return true if the event was handled (caller should skip panning),
+		 *         false if panning should proceed as normal.
+		 */
+		private boolean handleCtrlClickForRelationship(MouseEvent evt) {
+		    ArchitectFrame af = session.getArchitectFrame();
+		    CreateRelationshipAction activeAction = null;
+		    if (af.getCreateIdentifyingRelationshipAction().isActive()
+		            && af.getCreateIdentifyingRelationshipAction().getPkTablePane() != null) {
+		        activeAction = af.getCreateIdentifyingRelationshipAction();
+		    } else if (af.getCreateNonIdentifyingRelationshipAction().isActive()
+		            && af.getCreateNonIdentifyingRelationshipAction().getPkTablePane() != null) {
+		        activeAction = af.getCreateNonIdentifyingRelationshipAction();
+		    }
+		    if (activeAction == null) return false;
+
+		    Point p = evt.getPoint();
+		    unzoomPoint(p);
+		    PlayPenComponent c = contentPane.getComponentAt(p);
+		    if (!(c instanceof TablePane)) return false;
+
+		    TablePane tp = (TablePane) c;
+		    Point localP = new Point(p);
+		    localP.translate(-tp.getX(), -tp.getY());
+		    int colIdx = tp.pointToItemIndex(localP);
+
+		    try {
+		        if (colIdx < 0 || colIdx >= tp.getModel().getColumns().size()) return false;
+		        SQLColumn fkCol = tp.getModel().getColumns().get(colIdx);
+		        CreateRelationshipAction.doCreateRelationshipToColumn(
+		                activeAction.getPkTablePane().getModel(), tp.getModel(),
+		                fkCol, PlayPen.this, activeAction.isIdentifying());
+		    } catch (ca.sqlpower.sqlobject.SQLObjectException e) {
+		        logger.error("Could not get columns from FK table", e);
+		        return false;
+		    } finally {
+		        activeAction.cancel();
+		    }
+		    return true;
 		}
 
 		// ---------------- MOUSEMOTION LISTENER INTERFACE -----------------
