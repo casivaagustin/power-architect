@@ -159,6 +159,39 @@ All JSON and PostGIS types have no precision or scale — they are emitted as ba
 
 ---
 
+## Table Visual Appearance
+
+### Layout & Spacing
+
+| Constant | Value | Effect |
+|----------|-------|--------|
+| `TITLE_PADDING` | 10 px | Extra vertical padding (top + bottom) inside the header area |
+| `ROW_GAP` | 4 px | Extra vertical space added below each column row |
+| `BOTTOM_PADDING` | 8 px | Empty space below the last column row |
+
+### Header
+
+- The table name is rendered in **bold**.
+- The header has a **black border** that is part of the unified outer table border — no separate box is drawn for the column area.
+- A **separator line** is drawn at the exact bottom of the header, flush with the outer border.
+
+### PK Separator Line
+
+The dashed line that divides primary-key columns from non-PK columns is inset by `BOX_LINE_THICKNESS` on both sides so it sits cleanly inside the outer border.
+
+### Font Rendering
+
+Rendering hints are applied per paint call and adapt to the current zoom level:
+
+| Zoom | Text anti-aliasing | Fractional metrics |
+|------|--------------------|--------------------|
+| ≥ 75 % | LCD sub-pixel (`LCD_HRGB`) — crisp on standard LCD screens | On |
+| < 75 % | Grayscale AA — avoids sub-pixel fringing on small glyphs | Off |
+
+Shape anti-aliasing (`ANTIALIAS_ON`) and quality rendering (`RENDER_QUALITY`) are always enabled.
+
+---
+
 ## Building
 
 Requirements:

@@ -19,6 +19,7 @@
 package ca.sqlpower.architect.swingui;
 
 import java.awt.BasicStroke;
+import java.awt.RenderingHints;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -80,6 +81,16 @@ public class BasicTablePaneUI extends TablePaneUI implements java.io.Serializabl
 	 * Extra vertical padding added below each column row so rows are easier to scan.
 	 */
 	public static final int ROW_GAP = 4;
+
+	/**
+	 * Extra vertical padding (top + bottom combined) added to the title area.
+	 */
+	public static final int TITLE_PADDING = 10;
+
+	/**
+	 * Extra vertical padding added below the last column row.
+	 */
+	public static final int BOTTOM_PADDING = 8;
 	
 	/**
 	 * The width and height of the arc for a rounded rectangle table. 
@@ -119,7 +130,20 @@ public class BasicTablePaneUI extends TablePaneUI implements java.io.Serializabl
 		try {
 			Graphics2D g2 = (Graphics2D) g;
 			Stroke oldStroke = g2.getStroke();
-			
+
+			double zoom = tp.getPlayPen().getZoom();
+			g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,      RenderingHints.VALUE_ANTIALIAS_ON);
+			g2.setRenderingHint(RenderingHints.KEY_RENDERING,         RenderingHints.VALUE_RENDER_QUALITY);
+			if (zoom >= 0.75) {
+			    // Normal / zoomed-in: LCD sub-pixel rendering looks crisp
+			    g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB);
+			    g2.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
+			} else {
+			    // Zoomed out: grayscale AA avoids sub-pixel fringing on small glyphs
+			    g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+			    g2.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_OFF);
+			}
+
 			if (tp.isDashed()) {
 			    g2.setStroke(DASHED_STROKE);
 			} else {
@@ -179,10 +203,11 @@ public class BasicTablePaneUI extends TablePaneUI implements java.io.Serializabl
 				g2.setColor(tp.getBackgroundColor());
 			}
 			
+			int titleHeight = fontHeight + TITLE_PADDING;
 			if (tp.isRounded()) {
-			    g2.fillRoundRect(0, 0, tp.getWidth(), fontHeight, ARC_LENGTH, ARC_LENGTH);
+			    g2.fillRoundRect(0, 0, tp.getWidth(), titleHeight, ARC_LENGTH, ARC_LENGTH);
 			} else {
-			    g2.fillRect(0, 0, tp.getWidth(), fontHeight);
+			    g2.fillRect(0, 0, tp.getWidth(), titleHeight);
 			}
 			
 			// also darken title text if table is selected
@@ -193,14 +218,18 @@ public class BasicTablePaneUI extends TablePaneUI implements java.io.Serializabl
 			}
 			
 
-			// print table name
-			g2.drawString(getTitleString(tablePane), 0, y += ascent);
-			
+			// print table name (bold, vertically centred in title area)
+			Font boldFont = font.deriveFont(Font.BOLD);
+			g2.setFont(boldFont);
+			g2.drawString(getTitleString(tablePane), BOX_LINE_THICKNESS + tp.getMargin().left, TITLE_PADDING / 2 + ascent);
+			g2.setFont(font);
+			y = titleHeight;
+
 			g2.setColor(Color.BLACK);
 			if (fontHeight < 0) {
 				throw new IllegalStateException("FontHeight is negative"); //$NON-NLS-1$
 			}
-			
+
 			y += GAP + BOX_LINE_THICKNESS + tp.getMargin().top;
 
 			// print columns
@@ -223,7 +252,7 @@ public class BasicTablePaneUI extends TablePaneUI implements java.io.Serializabl
 			        currentColor = null;
 			        y += PK_GAP;
 			        g2.setColor(Color.BLACK);
-			        g2.drawLine(0, y+maxDescent-(PK_GAP/2), width-1, y+maxDescent-(PK_GAP/2));
+			        g2.drawLine(BOX_LINE_THICKNESS, y+maxDescent-(PK_GAP/2), width-BOX_LINE_THICKNESS-1, y+maxDescent-(PK_GAP/2));
 			    }
 			    if (tp.isItemSelected(i)) {
 			        if (logger.isDebugEnabled()) logger.debug("Column "+i+" is selected"); //$NON-NLS-1$ //$NON-NLS-2$
@@ -240,15 +269,14 @@ public class BasicTablePaneUI extends TablePaneUI implements java.io.Serializabl
 			    i++;
 			}
 			
-			// draw box around columns
+			// draw unified outer border + header separator line
      		g2.setColor(Color.BLACK);
 			if (tp.isRounded()) {
-	                g2.drawRoundRect(0, fontHeight+GAP, width-BOX_LINE_THICKNESS, 
-	                        height-(fontHeight+GAP+BOX_LINE_THICKNESS), ARC_LENGTH, ARC_LENGTH);
-	            } else {
-	                g2.drawRect(0, fontHeight+GAP, width-BOX_LINE_THICKNESS, 
-	                        height-(fontHeight+GAP+BOX_LINE_THICKNESS));
-	            }
+			    g2.drawRoundRect(0, 0, width-BOX_LINE_THICKNESS, height-BOX_LINE_THICKNESS, ARC_LENGTH, ARC_LENGTH);
+			} else {
+			    g2.drawRect(0, 0, width-BOX_LINE_THICKNESS, height-BOX_LINE_THICKNESS);
+			}
+			g2.drawLine(0, titleHeight, width-BOX_LINE_THICKNESS, titleHeight);
 			if (currentColor != null) {
 				g2.setColor(Color.BLACK);
 			}
@@ -256,7 +284,7 @@ public class BasicTablePaneUI extends TablePaneUI implements java.io.Serializabl
 			if (stillNeedPKLine) {
 			    stillNeedPKLine = false;
 			    y += PK_GAP;
-			    g2.drawLine(0, y+maxDescent-(PK_GAP/2), width-1, y+maxDescent-(PK_GAP/2));
+			    g2.drawLine(BOX_LINE_THICKNESS, y+maxDescent-(PK_GAP/2), width-BOX_LINE_THICKNESS-1, y+maxDescent-(PK_GAP/2));
 			}
 			
 			// paint insertion point
@@ -269,7 +297,7 @@ public class BasicTablePaneUI extends TablePaneUI implements java.io.Serializabl
 			int hiddenPkCount = tablePane.getHiddenPkCount();
             int pkSize = tablePane.getModel().getPkSize() - hiddenPkCount;
 			if (ip != ContainerPane.ITEM_INDEX_NONE) {
-			    y = GAP + BOX_LINE_THICKNESS + tp.getMargin().top + fontHeight;
+			    y = GAP + BOX_LINE_THICKNESS + tp.getMargin().top + titleHeight;
 			    if (ip == TablePane.COLUMN_INDEX_END_OF_PK) {
 			        y += (fontHeight + ROW_GAP) * pkSize;
 			    } else if (ip == TablePane.COLUMN_INDEX_START_OF_NON_PK) {
@@ -336,7 +364,7 @@ public class BasicTablePaneUI extends TablePaneUI implements java.io.Serializabl
 			FontRenderContext frc = c.getFontRenderContext();
 			FontMetrics metrics = c.getFontMetrics(font);
 			int fontHeight = metrics.getHeight();
-			height = insets.top + fontHeight + GAP + c.getMargin().top + PK_GAP + cols*fontHeight + BOX_LINE_THICKNESS*2 + c.getMargin().bottom + insets.bottom;
+			height = insets.top + (fontHeight + TITLE_PADDING) + GAP + c.getMargin().top + PK_GAP + cols*(fontHeight + ROW_GAP) + BOTTOM_PADDING + BOX_LINE_THICKNESS*2 + c.getMargin().bottom + insets.bottom;
 			width = c.getMinimumSize().width;
 			logger.debug("starting width is: " + width); //$NON-NLS-1$
 			List<String> itemsToCheck = new ArrayList<String>();
@@ -382,7 +410,7 @@ public class BasicTablePaneUI extends TablePaneUI implements java.io.Serializabl
 		
 		int numPkCols = tablePane.getModel().getPkSize() - numHiddenPkCols;
 		int numCols = tablePane.getItems().size() - numHiddenCols;
-		int firstColStart = fontHeight + GAP + BOX_LINE_THICKNESS + tablePane.getMargin().top;
+		int firstColStart = (fontHeight + TITLE_PADDING) + GAP + BOX_LINE_THICKNESS + tablePane.getMargin().top;
 		int pkLine = firstColStart + fontHeight*numPkCols;
 
 		if (logger.isDebugEnabled()) logger.debug("p.y = "+p.y); //$NON-NLS-1$
@@ -427,7 +455,7 @@ public class BasicTablePaneUI extends TablePaneUI implements java.io.Serializabl
         if (colidx == ContainerPane.ITEM_INDEX_TITLE) {
             return tablePane.getMargin().top + (fontHeight / 2);
         } else if (colidx >= 0 && colidx < tablePane.getItems().size()) {
-            int firstColY = fontHeight + GAP + BOX_LINE_THICKNESS + tablePane.getMargin().top;
+            int firstColY = (fontHeight + TITLE_PADDING) + GAP + BOX_LINE_THICKNESS + tablePane.getMargin().top;
             int y = firstColY + (fontHeight * colidx) + (fontHeight / 2);
             if (colidx >= tablePane.getModel().getPkSize()) {
                 y += PK_GAP;
@@ -550,7 +578,7 @@ public class BasicTablePaneUI extends TablePaneUI implements java.io.Serializabl
         FontMetrics metrics = tablePane.getFontMetrics(font);
         int fontHeight = metrics.getHeight();
         //Title
-        y += fontHeight;
+        y += fontHeight + TITLE_PADDING;
         
         if (!((SQLColumn) modelObject).isPrimaryKey()) {
             y += PK_GAP;
