@@ -200,13 +200,25 @@ This will:
 4. Run annotation processing
 5. Compile all application sources into `build/`
 
-### Build a runnable JAR
+### Build an embeddable JAR
 
 ```bash
 ant jar
 ```
 
-Produces `staging/architect.jar` — a self-contained JAR with a `Main-Class` manifest entry pointing to `ca.sqlpower.architect.swingui.ArchitectFrame`.
+Produces `dist/architect.jar` — contains only the compiled application classes. The manifest's `Class-Path` references `lib/*.jar` relative to the JAR location, so it cannot be run directly from `dist/` without also copying the libs there.
+
+### Build a runnable staging layout
+
+```bash
+ant stage
+```
+
+Produces `staging/architect.jar` together with all runtime dependencies in `staging/lib/`. This is the correct target when you want to run the application from the command line:
+
+```bash
+java -jar staging/architect.jar
+```
 
 ### Clean build artifacts
 
@@ -230,7 +242,7 @@ ant run
 
 Launches the Swing UI (`ArchitectFrame`) with `log4j` logging configured.
 
-### Via Java directly (after building)
+### Via Java directly (after `ant stage`)
 
 ```bash
 java -jar staging/architect.jar

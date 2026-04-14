@@ -839,8 +839,10 @@
     				manifest="${build}/manifest">
     	</jar>
   <!--  	<launch4j configFile="${installer.dir}/launch4j_config.xml" /> -->
+  	<!-- launch4j disabled: breaks on JDK 9+ due to module reflection restrictions;
+  	     Windows .exe generation is not needed for Linux builds.
   	<launch4j>
-			<config dontwrapjar="true" 
+			<config dontwrapjar="true"
 					headertype="gui"
 					jarpath="architect.jar"
 					outfile="${staging.dir}/architect.exe"
@@ -853,9 +855,9 @@
 					<jre path ="/jre" minVersion="1.8.0"/>
 			</config>
 		</launch4j>
-    	
+
     	<launch4j>
-			<config dontwrapjar="true" 
+			<config dontwrapjar="true"
 					headertype="gui"
 					jarpath="uninstaller.jar"
 					outfile="${staging.dir}/uninstaller.exe"
@@ -872,6 +874,7 @@
 					<jre path ="/jre" minVersion="1.8.0"/>
 			</config>
 		</launch4j>
+	-->
     	
 		<copy todir="${staging.dir}/jdbc">
 		    <fileset dir="jdbc_drivers" includes="*.jar"/>
@@ -880,10 +883,12 @@
     	<copy todir="${staging.dir}/doc" file="doc/ReleaseNotes.txt"/>
 
     	<copy todir="${staging.dir}" file="LICENSE"/>
+    	<!-- sqlpower.certificate skipped: not required for local builds
     	<echo message="copying certificate: ${sqlpower.certificate}"/>
     	<copy todir="${staging.dir}">
     				<fileset dir="${sqlpower.certificate}" includes="*.*"/>
     	</copy>
+    	-->
     	<!-- No point in signing until we have a certificate that's signed by a CA
     	<signjar alias="sqlpower" keystore="keystore" storepass="low_security" keypass="low_security">
     	   <fileset dir="webstart/lib"/>
