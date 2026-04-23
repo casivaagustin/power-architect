@@ -410,16 +410,17 @@ public class BasicTablePaneUI extends TablePaneUI implements java.io.Serializabl
 		
 		int numPkCols = tablePane.getModel().getPkSize() - numHiddenPkCols;
 		int numCols = tablePane.getItems().size() - numHiddenCols;
+		int rowHeight = fontHeight + ROW_GAP;
 		int firstColStart = (fontHeight + TITLE_PADDING) + GAP + BOX_LINE_THICKNESS + tablePane.getMargin().top;
-		int pkLine = firstColStart + fontHeight*numPkCols;
+		int pkLine = firstColStart + rowHeight*numPkCols;
 
 		if (logger.isDebugEnabled()) logger.debug("p.y = "+p.y); //$NON-NLS-1$
-		
+
 		int returnVal;
-		
+
 		logger.debug("pkLine:" + pkLine + ", numPkCols: " + numPkCols); //$NON-NLS-1$ //$NON-NLS-2$
 		logger.debug("font height: " + fontHeight + ", firstColStart: " + firstColStart); //$NON-NLS-1$ //$NON-NLS-2$
-		
+
 		if (p.y < 0) {
 		    logger.debug("y<0"); //$NON-NLS-1$
 		    returnVal = ContainerPane.ITEM_INDEX_NONE;
@@ -427,18 +428,18 @@ public class BasicTablePaneUI extends TablePaneUI implements java.io.Serializabl
 		    logger.debug("y<=fontHeight = "+fontHeight); //$NON-NLS-1$
 		    returnVal = ContainerPane.ITEM_INDEX_TITLE;
 		} else if (numPkCols > 0 && p.y <= pkLine - 1) {
-		    logger.debug("y<=firstColStart + fontHeight*numPkCols - 1= "+(firstColStart + fontHeight*numPkCols)); //$NON-NLS-1$
-		    returnVal = (p.y - firstColStart) / fontHeight;
+		    logger.debug("y<=firstColStart + rowHeight*numPkCols - 1= "+(firstColStart + rowHeight*numPkCols)); //$NON-NLS-1$
+		    returnVal = (p.y - firstColStart) / rowHeight;
 		    returnVal = findIndex(returnVal);
 		} else if (p.y <= pkLine + PK_GAP/2) {
 		    logger.debug("y<=pkLine + pkGap/2 = "+(pkLine + PK_GAP/2)); //$NON-NLS-1$
 		    returnVal = TablePane.COLUMN_INDEX_END_OF_PK;
 		} else if (p.y <= pkLine + PK_GAP) {
-		    logger.debug("y<=firstColStart + fontHeight*numPkCols + pkGap = "+(firstColStart + fontHeight*numPkCols + PK_GAP)); //$NON-NLS-1$
+		    logger.debug("y<=firstColStart + rowHeight*numPkCols + pkGap = "+(firstColStart + rowHeight*numPkCols + PK_GAP)); //$NON-NLS-1$
 		    returnVal = TablePane.COLUMN_INDEX_START_OF_NON_PK;
-		} else if (p.y < firstColStart + PK_GAP + fontHeight*numCols) {
-		    logger.debug("y<=firstColStart + pkGap + fontHeight*numCols = " + (firstColStart + PK_GAP + fontHeight*numCols)); //$NON-NLS-1$
-		    returnVal = (p.y - firstColStart - PK_GAP) / fontHeight;
+		} else if (p.y < firstColStart + PK_GAP + rowHeight*numCols) {
+		    logger.debug("y<=firstColStart + pkGap + rowHeight*numCols = " + (firstColStart + PK_GAP + rowHeight*numCols)); //$NON-NLS-1$
+		    returnVal = (p.y - firstColStart - PK_GAP) / rowHeight;
 		    returnVal = findIndex(returnVal);
 		} else {
 		    returnVal = ContainerPane.ITEM_INDEX_NONE;
@@ -456,7 +457,7 @@ public class BasicTablePaneUI extends TablePaneUI implements java.io.Serializabl
             return tablePane.getMargin().top + (fontHeight / 2);
         } else if (colidx >= 0 && colidx < tablePane.getItems().size()) {
             int firstColY = (fontHeight + TITLE_PADDING) + GAP + BOX_LINE_THICKNESS + tablePane.getMargin().top;
-            int y = firstColY + (fontHeight * colidx) + (fontHeight / 2);
+            int y = firstColY + ((fontHeight + ROW_GAP) * colidx) + (fontHeight / 2);
             if (colidx >= tablePane.getModel().getPkSize()) {
                 y += PK_GAP;
             }
