@@ -40,7 +40,6 @@ import ca.sqlpower.architect.CoreUserSettings;
 import ca.sqlpower.architect.LocaleChooser;
 import ca.sqlpower.architect.UpdateCheckSettings;
 import ca.sqlpower.architect.ddl.DDLUserSettings;
-import ca.sqlpower.architect.etl.ETLUserSettings;
 import ca.sqlpower.swingui.DataEntryPanel;
 import ca.sqlpower.swingui.SPSUtils;
 
@@ -53,9 +52,6 @@ public class PreferencesPanel extends JPanel implements DataEntryPanel {
 
 	private JTextField plIniName;
 	private JButton plIniButton;
-
-	private JTextField etlLogFileName;
-	private JButton etlLogFileButton;
 
 	private JTextField ddlLogFileName;
 	private JButton ddlLogFileButton;
@@ -95,15 +91,6 @@ public class PreferencesPanel extends JPanel implements DataEntryPanel {
 		plIniButton.setAction(new ChooseFileAction(plIniName,SPSUtils.INI_FILE_FILTER,Messages.getString("PreferencesPanel.browseButton"))); //$NON-NLS-1$
 		add(plIniPanel);
 		// line 2
-		add(new JLabel(Messages.getString("PreferencesPanel.etlLogFileLabel"))); //$NON-NLS-1$
-		JPanel etlLogFilePanel = new JPanel();
-		etlLogFilePanel.setLayout(new BorderLayout());
-		etlLogFilePanel.add(etlLogFileName = new JTextField("",35), BorderLayout.WEST); //$NON-NLS-1$
-		etlLogFilePanel.add(etlLogFileButton = new JButton(), BorderLayout.EAST);
-		etlLogFileButton.setAction(new ChooseFileAction(etlLogFileName,SPSUtils.LOG_FILE_FILTER,Messages.getString("PreferencesPanel.browseButton"))); //$NON-NLS-1$
-		add(etlLogFilePanel);
-
-		// line 3
 		add(new JLabel(Messages.getString("PreferencesPanel.forwardEngineeringLogFileLabel"))); //$NON-NLS-1$
 		JPanel ddlLogFilePanel = new JPanel();
 		ddlLogFilePanel.setLayout(new BorderLayout());
@@ -163,7 +150,6 @@ public class PreferencesPanel extends JPanel implements DataEntryPanel {
 
 	protected void revertToUserSettings() {
 		plIniName.setText(context.getPlDotIniPath());
-		etlLogFileName.setText(us.getETLUserSettings().getString(ETLUserSettings.PROP_ETL_LOG_PATH,"")); //$NON-NLS-1$
 		ddlLogFileName.setText(us.getDDLUserSettings().getString(DDLUserSettings.PROP_DDL_LOG_PATH,"")); //$NON-NLS-1$
 		if (us.getSwingSettings().getBoolean(ArchitectSwingUserSettings.PLAYPEN_RENDER_ANTIALIASED, false)) {
 		    playPenAntialiasOn.setSelected(true);
@@ -198,7 +184,6 @@ public class PreferencesPanel extends JPanel implements DataEntryPanel {
 	        JOptionPane.showMessageDialog(this,Messages.getString("PreferencesPanel.LocaleChangedMsg"), "Default Language", JOptionPane.INFORMATION_MESSAGE);
 	    }
 		context.setPlDotIniPath(plIniName.getText());
-		us.getETLUserSettings().setString(ETLUserSettings.PROP_ETL_LOG_PATH,etlLogFileName.getText());
 		us.getDDLUserSettings().setString(DDLUserSettings.PROP_DDL_LOG_PATH,ddlLogFileName.getText());
 		us.getSwingSettings().setBoolean(ArchitectSwingUserSettings.PLAYPEN_RENDER_ANTIALIASED, playPenAntialiasOn.isSelected());
         us.getSwingSettings().setBoolean(ArchitectSwingUserSettings.SHOW_WELCOMESCREEN, showWelcomeOn.isSelected());

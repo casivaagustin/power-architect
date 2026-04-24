@@ -34,10 +34,6 @@ import ca.sqlpower.architect.CoreUserSettings;
 import ca.sqlpower.architect.ProjectSettings;
 import ca.sqlpower.architect.ProjectSettings.ColumnVisibility;
 import ca.sqlpower.architect.enterprise.ArchitectClientSideSession;
-import ca.sqlpower.architect.etl.kettle.KettleJob;
-import ca.sqlpower.architect.olap.OLAPRootObject;
-import ca.sqlpower.architect.olap.OLAPSession;
-import ca.sqlpower.architect.swingui.olap.OLAPEditSession;
 import ca.sqlpower.architect.undo.ArchitectUndoManager;
 import ca.sqlpower.swingui.RecentMenu;
 import ca.sqlpower.swingui.SwingWorkerRegistry;
@@ -150,10 +146,6 @@ public interface ArchitectSwingSession extends ArchitectSession, SwingWorkerRegi
      */
     public void setSavingEntireSource(boolean argSavingEntireSource);
     
-    public KettleJob getKettleJob();
-
-    public void setKettleJob(KettleJob kettleJob);
-
     /**
      * Initializes the GUI components for this session. Call this only if you need a GUI.
      * This method must be called on the Swing Event Dispatch Thread.
@@ -255,41 +247,6 @@ public interface ArchitectSwingSession extends ArchitectSession, SwingWorkerRegi
      */
     public ColumnVisibility getColumnVisibility();
     
-    /**
-     * Shows the schema manager dialog for this session's OLAP Schemas. 
-     * 
-     * @param owner The owner of the dialog.
-     */
-    public void showOLAPSchemaManager(Window owner);    
-    
-    /**
-     * Returns a list of the OLAPEditSessions associated with this session's OLAP Schemas.
-     * 
-     * @return the list of edit sessions.
-     */
-    public List<OLAPEditSession> getOLAPEditSessions();
-    
-    
-    /**
-     * Returns the OLAPEditSession that is associated with editing the given
-     * OLAPSession.
-     * 
-     * @param olapSession
-     *            the OLAPSession in question, must not be null.
-     * @return the associated OLAPEditSession, creates a new one if none found.
-     */
-    public OLAPEditSession getOLAPEditSession(OLAPSession olapSession);
-    
-    /**
-     * Returns the OLAP root object, which contains all the OLAP sessions that are part of this
-     * Architect session.
-     * <p>
-     * Note: We would prefer not to let ArchitectSession reference anything in the OLAP editor,
-     * since we do not want the core Architect API to include OLAP support.  We are currently
-     * trying to come up with a way to put this somewhere else.
-     */
-    public OLAPRootObject getOLAPRootObject();
-
     /**
      * Adds the given listener to the list of interested parties who want to be
      * notified when this session is about to close. Being a lifecycle listener

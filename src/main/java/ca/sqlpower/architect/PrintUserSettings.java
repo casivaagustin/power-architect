@@ -24,7 +24,6 @@ import java.util.Properties;
  * The DDLUserSettings class stores project-independent DDL settings.
  *
  * @see ca.sqlpower.architect.CoreUserSettings
- * @see ca.sqlpower.architect.etl.ETLUserSettings
  * @see ca.sqlpower.architect.ddl.DDLUserSettings
  * @see ca.sqlpower.architect.swingui.ArchitectSwingUserSettings
  */
@@ -84,7 +83,7 @@ public class PrintUserSettings {
 
 	/**
 	 * This method is only intended for the UserSettings class to
-	 * deserialize an instance of ETLUserSettings without having to
+	 * deserialize settings without having to
 	 * know how to set the properties using their individual setXXX
 	 * methods.
 	 */

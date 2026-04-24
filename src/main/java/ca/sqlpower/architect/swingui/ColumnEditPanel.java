@@ -69,16 +69,12 @@ import javax.swing.event.DocumentListener;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.text.JTextComponent;
-import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 
 import org.apache.log4j.Logger;
 
 import ca.sqlpower.architect.ddl.DDLUtils;
-import ca.sqlpower.architect.swingui.dbtree.DBTreeCellRenderer;
-import ca.sqlpower.architect.swingui.dbtree.DBTreeModel;
 import ca.sqlpower.object.AbstractPoolingSPListener;
 import ca.sqlpower.object.SPChildEvent;
 import ca.sqlpower.object.SPListener;
@@ -91,7 +87,6 @@ import ca.sqlpower.sqlobject.SQLTypePhysicalPropertiesProvider.PropertyType;
 import ca.sqlpower.sqlobject.UserDefinedSQLType;
 import ca.sqlpower.swingui.ChangeListeningDataEntryPanel;
 import ca.sqlpower.swingui.DataEntryPanelChangeUtil;
-import ca.sqlpower.swingui.PopupJTreeAction;
 import ca.sqlpower.swingui.SPSUtils;
 import ca.sqlpower.util.SQLPowerUtils;
 import ca.sqlpower.util.TransactionEvent;
@@ -177,17 +172,6 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
      */
     private final Map<JComponent, JCheckBox> typeOverrideMap = new HashMap<JComponent, JCheckBox>();
     
-    /**
-     * Label that shows where the column was reverse engineered from, or
-     * where its data comes from when building an ETL mapping.
-     */
-    private final JButton colSourceButton;
-    
-    private final JTree colSourceTree;
-    
-    private final TreeNode sourceNotSpecifiedTreeNode = 
-        new DefaultMutableTreeNode(Messages.getString("ColumnEditPanel.noneSpecified"), false);
-
     private final JTextField colLogicalName;
     
     private final JTextField colPhysicalName;
@@ -704,98 +688,6 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
         colRemarks.setLineWrap(true);
         colRemarks.setWrapStyleWord(true);
 
-        layout.appendRow(RowSpec.decode("5dlu"));
-        row++;
-
-        layout.appendRow(RowSpec.decode("p"));
-        panel.add(makeTitle(Messages.getString("ColumnEditPanel.source")), cc.xyw(2, row++, width)); //$NON-NLS-1$
-        layout.appendRow(RowSpec.decode("p"));
-        
-        cb = new JCheckBox();
-        if (cols.size() > 1) {
-            panel.add(cb, cc.xy(1, row));
-        }
-        
-        colSourceTree = new JTree();
-        DBTreeModel sourceTreeModel = new DBTreeModel(session.getRootObject(), colSourceTree, false, true, false, false, false) {
-            @Override
-            public Object getChild(Object parent, int index) {
-                if (parent == sourceNotSpecifiedTreeNode) {
-                    return null;
-                } else if (parent == getRoot()) {
-                    if (index == 0) {
-                        return sourceNotSpecifiedTreeNode;
-                    } else {
-                        return super.getChild(parent, index - 1);
-                    }
-                } else {
-                    return super.getChild(parent, index);
-                }
-            }
-            @Override
-            public int getChildCount(Object parent) {
-                if (parent == sourceNotSpecifiedTreeNode) {
-                    return 0;
-                } else if (parent == getRoot()) {
-                    return super.getChildCount(parent) + 1;
-                } else {
-                    return super.getChildCount(parent);
-                }
-            }
-            @Override
-            public int getIndexOfChild(Object parent, Object child) {
-                if (parent == sourceNotSpecifiedTreeNode) {
-                    return -1;
-                } else if (child == sourceNotSpecifiedTreeNode) {
-                    return 0;
-                } else if (parent == getRoot()) {
-                    int index = super.getIndexOfChild(parent, child);
-                    if (index != -1) {
-                        return index + 1;
-                    } else {
-                        return -1;
-                    }
-                } else {
-                    return super.getIndexOfChild(parent, child);
-                }
-            }
-            @Override
-            public boolean isLeaf(Object parent) {
-                if (parent == sourceNotSpecifiedTreeNode) {
-                    return true;
-                } else {
-                   return super.isLeaf(parent);
-                }
-            }
-            
-        };
-        colSourceTree.setModel(sourceTreeModel);
-        colSourceTree.setRootVisible(false);
-        colSourceTree.setShowsRootHandles(true);
-        colSourceTree.setCellRenderer(new DBTreeCellRenderer() {
-            @Override
-            public Component getTreeCellRendererComponent(JTree tree, Object value, boolean sel, boolean expanded,
-                    boolean leaf, int row, boolean hasFocus) {
-                super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus);
-                if (!sel && value == sourceNotSpecifiedTreeNode) {
-                    setForeground(getTextNonSelectionColor());
-                }
-                return this;
-            }
-        });
-        colSourceTree.getSelectionModel().setSelectionMode(
-                TreeSelectionModel.SINGLE_TREE_SELECTION);
-        
-        colSourceButton = new JButton();
-        colSourceButton.setAction(new PopupJTreeAction(panel, colSourceTree, colSourceButton, SQLColumn.class));
-        
-        panel.add(colSourceButton, cc.xyw(2, row++, 5));
-        componentEnabledMap.put(colSourceTree, cb);
-        
-        layout.appendRow(RowSpec.decode("5dlu"));
-        row++;
-        
-
         // start with all components enabled; if there are multiple columns
         // to edit, these checkboxes will be turned off selectively for the
         // mismatching values
@@ -835,25 +727,6 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
         SQLPowerUtils.listenToHierarchy(session.getRootObject(), obsolesenceListener);
         SQLPowerUtils.listenToHierarchy(session.getRootObject(), this);
         panel.addAncestorListener(cleanupListener);
-        
-        colSourceTree.addTreeSelectionListener(new TreeSelectionListener() {
-            @Override
-            public void valueChanged(TreeSelectionEvent e) {
-                TreePath path = e.getNewLeadSelectionPath();
-                if (path != null) {
-                    Object selection = path.getLastPathComponent();
-                    if (selection instanceof SQLColumn) {
-                        SQLColumn sourceColumn = (SQLColumn) selection;
-                        colSourceButton.setText(DDLUtils.toQualifiedName(
-                                sourceColumn.getParent()) + "." + sourceColumn.getName());
-                    } else {
-                        colSourceButton.setText(Messages.getString("ColumnEditPanel.noneSpecified"));
-                    }
-                } else {
-                    colSourceButton.setText(Messages.getString("ColumnEditPanel.noneSpecified"));
-                }
-            }
-        });
         
         colType.addTreeSelectionListener(new TreeSelectionListener() {
             public void valueChanged(TreeSelectionEvent e) {
@@ -921,21 +794,6 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
      * @param col One of the columns to edit in this dialog.
      */
     private void updateComponents(SQLColumn col) throws SQLObjectException {
-        SQLColumn sourceColumn = col.getSourceColumn();
-        if (sourceColumn == null) {
-            Object[] treePath = {session.getRootObject(), sourceNotSpecifiedTreeNode};
-            colSourceTree.setSelectionPath(new TreePath(treePath));
-            colSourceButton.setText(Messages.getString("ColumnEditPanel.noneSpecified")); //$NON-NLS-1$
-        } else {
-            updateComponent(colSourceTree, sourceColumn);
-            
-            DBTreeModel model = (DBTreeModel) colSourceTree.getModel();
-            colSourceTree.setSelectionPath(new TreePath(model.getPathToNode(sourceColumn)));
-            colSourceButton.setText(
-                    DDLUtils.toQualifiedName(
-                            sourceColumn.getParent()) + "." + sourceColumn.getName());
-        }
-        
         updateComponent(colLogicalName, col.getName());
         updateComponent(colPhysicalName, col.getPhysicalName());
         
@@ -945,8 +803,6 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
             typeChooserButton.setText(
                     ((UserDefinedSQLType) col.getUserDefinedSQLType().getUpstreamType()).getName());
             updatingTypeField = false;
-        } else {
-            colSourceButton.setText(Messages.getString("ColumnEditPanel.noneSpecified"));
         }
 
         updateSQLTypeComponents(col.getUserDefinedSQLType(), true);
@@ -1129,15 +985,6 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
             compoundEditRoot.begin(Messages.getString("ColumnEditPanel.compoundEditName")); //$NON-NLS-1$
             
             for (SQLColumn column : columns) {
-                if (componentEnabledMap.get(colSourceTree).isSelected()) {
-                    Object selection = colSourceTree.getLastSelectedPathComponent();
-                    if (selection instanceof SQLColumn) {
-                        column.setSourceColumn((SQLColumn) selection);
-                    } else {
-                        column.setSourceColumn(null);
-                    }
-                }
-                
                 if (componentEnabledMap.get(colPhysicalName).isSelected()) {
                     column.setPhysicalName(colPhysicalName.getText().toLowerCase());
                 }                
@@ -1311,11 +1158,6 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
     /** Only for testing. Normal client code should not need to call this. */
     public JTree getColType() {
         return colType;
-    }
-
-    /** Only for testing. Normal client code should not need to call this. */
-    public JButton getSourceColumnButton() {
-        return colSourceButton;
     }
 
     public boolean hasUnsavedChanges() {

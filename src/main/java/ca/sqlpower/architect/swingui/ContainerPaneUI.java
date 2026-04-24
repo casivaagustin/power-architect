@@ -23,16 +23,14 @@ import java.awt.Graphics2D;
 import java.awt.Point;
 import java.io.Serializable;
 
-import ca.sqlpower.architect.swingui.olap.DimensionPane;
 import ca.sqlpower.object.AbstractSPListener;
 
 public abstract class ContainerPaneUI extends AbstractSPListener
 implements PlayPenComponentUI, Serializable {
-    
+
     /**
-     * This delegate method is specified by {@link DimensionPane#pointToItemIndex(Point)}
-     * Subclass of DimensionPaneUI will implement this method to calculate column index
-     * given a point on the playpenComponent.
+     * Subclass will implement this method to calculate item index given a point
+     * on the playpen component.
      */
     @Deprecated
     public abstract int pointToItemIndex(Point p);

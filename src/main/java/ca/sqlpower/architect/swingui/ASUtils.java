@@ -47,7 +47,6 @@ import org.apache.log4j.Logger;
 import ca.sqlpower.architect.ArchitectSession;
 import ca.sqlpower.architect.ArchitectVersion;
 import ca.sqlpower.architect.UserSettings;
-import ca.sqlpower.architect.etl.kettle.KettleJob;
 import ca.sqlpower.sql.JDBCDataSource;
 import ca.sqlpower.sql.JDBCDataSourceType;
 import ca.sqlpower.sql.SPDataSource;
@@ -255,47 +254,8 @@ public class ASUtils {
     }
 
     /**
-     * 
-     */
-    public static JDialog showSplitPropertiesDialog(List<SQLTable> tableList, 
-            KettleJob settings, Window parentWindow) {
-
-        final KettleSplitJobPanel  splitPanel = new KettleSplitJobPanel(tableList, settings);
-        logger.debug("Showing Split job  dialog"); 
-
-        Callable<Boolean> okCall = new Callable<Boolean>() {
-            public Boolean call() {
-                if (splitPanel.applyChanges()) {
-                    return Boolean.TRUE;
-                }
-                return Boolean.FALSE;
-            }
-        };
-
-        Callable<Boolean> cancelCall = new Callable<Boolean>() {
-            public Boolean call() {
-                splitPanel.discardChanges();
-                return Boolean.TRUE;
-            }
-        };
-
-        JDialog d = DataEntryPanelBuilder.createDataEntryPanelDialog(
-                splitPanel, parentWindow,
-                Messages.getString("ASUtils.splitjobPanelDialogTitle"), 
-                DataEntryPanelBuilder.OK_BUTTON_LABEL,
-                okCall, cancelCall);
-
-        d.pack();
-        d.setLocationRelativeTo(parentWindow);
-        d.setVisible(true);
-        return d;
-    }
-
-
-    /**
-     * Creates a tabbed panel for editing various aspects of the given data
-     * source. Currently, the tabs are for General Options and Kettle Options.
-     * 
+     * Creates a panel for editing the given data source.
+     *
      * @param ds
      *            The data source to edit
      * @param enforceUniqueName
@@ -307,22 +267,7 @@ public class ASUtils {
     public static DataEntryPanel createDataSourceOptionsPanel(JDBCDataSource ds, boolean enforceUniqueName) {
         final JDBCDataSourcePanel generalPanel = new JDBCDataSourcePanel(ds);
         generalPanel.setEnforcingUniqueName(enforceUniqueName);
-        final KettleDataSourceOptionsPanel kettlePanel = new KettleDataSourceOptionsPanel(ds);
-
-        TabbedDataEntryPanel p = new TabbedDataEntryPanel();
-        p.addTab(Messages.getString("ASUtils.datasourceOptionsGeneralTab"), generalPanel); //$NON-NLS-1$
-        p.addTab(Messages.getString("ASUtils.datasourceOptionsKettleTab"), kettlePanel); //$NON-NLS-1$
-        
-        // update kettle fields if/when user picks new driver
-        generalPanel.getDataSourceTypeBox().addItemListener(new ItemListener() {
-            public void itemStateChanged(ItemEvent e) {
-                JComboBox<JDBCDataSourceType> cb = (JComboBox<JDBCDataSourceType>) e.getSource();
-                JDBCDataSourceType parentType = (JDBCDataSourceType) cb.getSelectedItem();
-                kettlePanel.parentTypeChanged(parentType);
-            }
-        });
-
-        return p;
+        return generalPanel;
     }
 
     public static String lineToString(Line2D.Double l) {

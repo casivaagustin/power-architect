@@ -25,7 +25,6 @@ import java.util.prefs.Preferences;
 import org.apache.log4j.Logger;
 
 import ca.sqlpower.architect.ddl.DDLUserSettings;
-import ca.sqlpower.architect.etl.ETLUserSettings;
 import ca.sqlpower.architect.swingui.ArchitectSwingUserSettings;
 import ca.sqlpower.architect.swingui.QFAUserSettings;
 import ca.sqlpower.sqlobject.SQLObjectException;
@@ -59,14 +58,7 @@ public class CoreUserSettings {
     private UserSettings swingSettings;
 
 	/**
-	 * ETL-related settings.  This is not a design problem like
-	 * swingSettings is, since ETL is part of the app's core
-	 * functionality.
-	 */
-    private ETLUserSettings etlUserSettings;
-
-	/**
-	 * DDL-related settings.  
+	 * DDL-related settings.
 	 */
     private DDLUserSettings ddlUserSettings;
 
@@ -80,7 +72,6 @@ public class CoreUserSettings {
 		super();
 		printUserSettings = new PrintUserSettings();
 		swingSettings = new ArchitectSwingUserSettings();
-		etlUserSettings = new ETLUserSettings();
 		ddlUserSettings = new DDLUserSettings();
         qfaUserSettings = new QFAUserSettings();
         setUpdateCheckSettings(new UpdateCheckSettings());
@@ -105,11 +96,6 @@ public class CoreUserSettings {
         }  else {
             swingSettings.setString(ArchitectSwingUserSettings.DEFAULT_LOCALE,Locale.getDefault().getDisplayName());
         }
-        etlUserSettings.setString(ETLUserSettings.PROP_PL_ENGINE_PATH,
-            prefs.get(ETLUserSettings.PROP_PL_ENGINE_PATH, ""));
-        etlUserSettings.setString(ETLUserSettings.PROP_ETL_LOG_PATH,
-            prefs.get(ETLUserSettings.PROP_ETL_LOG_PATH, defaultHomeFile("etl.log")));
-
         ddlUserSettings.setString(DDLUserSettings.PROP_DDL_LOG_PATH,prefs.get(DDLUserSettings.PROP_DDL_LOG_PATH, defaultHomeFile("ddl.log")));
 
         qfaUserSettings.setBoolean(QFAUserSettings.EXCEPTION_REPORTING,prefs.getBoolean(QFAUserSettings.EXCEPTION_REPORTING,true));
@@ -129,9 +115,6 @@ public class CoreUserSettings {
 
         prefs.putBoolean(ArchitectSwingUserSettings.PLAYPEN_RENDER_ANTIALIASED,
                 swingSettings.getBoolean(ArchitectSwingUserSettings.PLAYPEN_RENDER_ANTIALIASED, false));
-
-        prefs.put(ETLUserSettings.PROP_PL_ENGINE_PATH, etlUserSettings.getString(ETLUserSettings.PROP_PL_ENGINE_PATH,""));
-        prefs.put(ETLUserSettings.PROP_ETL_LOG_PATH, etlUserSettings.getString(ETLUserSettings.PROP_ETL_LOG_PATH,""));
 
         prefs.put(DDLUserSettings.PROP_DDL_LOG_PATH, ddlUserSettings.getString(DDLUserSettings.PROP_DDL_LOG_PATH,""));
 
@@ -174,14 +157,6 @@ public class CoreUserSettings {
 
 	public void setSwingSettings(UserSettings sprefs) {
 		swingSettings = sprefs;
-	}
-
-	public ETLUserSettings getETLUserSettings() {
-		return etlUserSettings;
-	}
-
-	public void setETLUserSettings(ETLUserSettings v) {
-		etlUserSettings = v;
 	}
 
 	public QFAUserSettings getQfaUserSettings() {

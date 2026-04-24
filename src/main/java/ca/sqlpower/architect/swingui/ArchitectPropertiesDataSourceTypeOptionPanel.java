@@ -73,7 +73,6 @@ import com.jgoodies.forms.layout.FormLayout;
  * This properties panel will allow users to modify all of the architect specific properties in
  * one tab panel.
  *
- * This name beats the {@link KettleDataSourceTypeOptionPanel} name for length.
  */
 public class ArchitectPropertiesDataSourceTypeOptionPanel implements DataSourceTypeEditorTabPanel {
     
@@ -332,9 +331,7 @@ public class ArchitectPropertiesDataSourceTypeOptionPanel implements DataSourceT
         
         for (String property : dsType.getPropertyNames()) {
             if (property.contains("architect")) {
-                if (property.contains("ca.sqlpower.architect.etl.kettle")) {
-                    //Kettle has it's own tab so we will let those properties be defined there.
-                } else if (property.contains(ProfileFunctionDescriptor.class.getName())) {
+                if (property.contains(ProfileFunctionDescriptor.class.getName())) {
                     String descriptorString = dsType.getProperty(property);
                     final ProfileFunctionDescriptor pfd = ProfileFunctionDescriptor.parseDescriptorString(descriptorString);
                     profileFunctionTableModel.addProfileFunctionDescriptor(pfd);

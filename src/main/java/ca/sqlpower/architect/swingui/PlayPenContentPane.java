@@ -31,9 +31,7 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
-import ca.sqlpower.architect.olap.OLAPSession;
 import ca.sqlpower.architect.swingui.critic.ModelBadge;
-import ca.sqlpower.architect.swingui.olap.UsageComponent;
 import ca.sqlpower.object.AbstractSPListener;
 import ca.sqlpower.object.AbstractSPObject;
 import ca.sqlpower.object.ObjectDependentException;
@@ -65,8 +63,7 @@ public class PlayPenContentPane extends AbstractSPObject {
      * dependentComponents)
      */
     private static final List<Class<? extends PlayPenComponent>> dependentComponentTypes = Collections
-            .unmodifiableList(new ArrayList<Class<? extends PlayPenComponent>>(Arrays.asList(Relationship.class,
-                    UsageComponent.class)));
+            .unmodifiableList(new ArrayList<Class<? extends PlayPenComponent>>(Arrays.asList(Relationship.class)));
 
     private PlayPen playPen;
 
@@ -79,14 +76,13 @@ public class PlayPenContentPane extends AbstractSPObject {
     /**
      * These components are dependent on the first list of components. They come
      * after that list in terms of the overall children list. Currently stores
-     * Relationships and UsageComponents
+     * Relationships
      */
     private List<PlayPenComponent> dependentComponents = new ArrayList<PlayPenComponent>();
 
     /**
-     * The object this content pane is displaying information about. Must be one
-     * of either SQLDatabase or OLAPSession and it must have a valid parent to
-     * attach a listener to which watches for this model being removed.
+     * The object this content pane is displaying information about.
+     * Must be a SQLDatabase.
      */
     private final SPObject modelContainer;
 
@@ -141,22 +137,16 @@ public class PlayPenContentPane extends AbstractSPObject {
 
     /**
      * @param modelContainer
-     *            Must be either a SQLDatabase or OLAPSession and must not be
-     *            null. If the model is an OLAPSession it must also have a valid
-     *            parent to listen to for removing the content pane correctly if
-     *            the model is removed.
+     *            Must be a SQLDatabase and must not be null.
      */
     @Constructor
     public PlayPenContentPane(@ConstructorParameter(propertyName = "modelContainer") SPObject modelContainer) {
         super();
         setName("PlayPenContentPane");
-        if (!(modelContainer instanceof SQLDatabase || modelContainer instanceof OLAPSession)) {
-            throw new IllegalArgumentException("modelContainer must either be a SQLDatabase or OLAPSession");
+        if (!(modelContainer instanceof SQLDatabase)) {
+            throw new IllegalArgumentException("modelContainer must be a SQLDatabase");
         }
         this.modelContainer = modelContainer;
-        if (modelContainer instanceof OLAPSession) {
-            modelContainer.getParent().addSPListener(modelContainerListener);
-        }
     }
 
     @Accessor

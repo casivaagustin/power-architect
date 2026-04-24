@@ -65,9 +65,6 @@ import ca.sqlpower.architect.UserSettings;
 import ca.sqlpower.architect.ddl.DDLGenerator;
 import ca.sqlpower.architect.ddl.LiquibaseSettings;
 import ca.sqlpower.architect.enterprise.ArchitectClientSideSession;
-import ca.sqlpower.architect.etl.kettle.KettleJob;
-import ca.sqlpower.architect.olap.OLAPRootObject;
-import ca.sqlpower.architect.olap.OLAPSession;
 import ca.sqlpower.architect.profile.ProfileManager;
 import ca.sqlpower.architect.profile.ProfileManagerImpl;
 import ca.sqlpower.architect.swingui.action.AboutAction;
@@ -76,8 +73,6 @@ import ca.sqlpower.architect.swingui.action.NewDataSourceAction;
 import ca.sqlpower.architect.swingui.action.OpenProjectAction;
 import ca.sqlpower.architect.swingui.action.PreferencesAction;
 import ca.sqlpower.architect.swingui.dbtree.DBTreeCellRenderer;
-import ca.sqlpower.architect.swingui.olap.OLAPEditSession;
-import ca.sqlpower.architect.swingui.olap.OLAPSchemaManager;
 import ca.sqlpower.architect.undo.ArchitectUndoManager;
 import ca.sqlpower.enterprise.AbstractNetworkConflictResolver;
 import ca.sqlpower.object.AbstractPoolingSPListener;
@@ -222,7 +217,6 @@ public class ArchitectSwingSessionImpl implements ArchitectSwingSession {
 
     private final DBTree dbTree;
 
-    private KettleJob kettleJob;
     // END STUFF BROUGHT IN FROM SwingUIProject
 
     private final List<SessionLifecycleListener<ArchitectSession>> lifecycleListeners;
@@ -230,14 +224,6 @@ public class ArchitectSwingSessionImpl implements ArchitectSwingSession {
     private Set<SPSwingWorker> swingWorkers;
 
     private ProjectModificationWatcher projectModificationWatcher;
-
-    private List<OLAPEditSession> olapEditSessions;
-    
-    /**
-     * A GUI for adding, removing, or opening the OLAP schema edit sessions
-     * that belong to this architect session.
-     */
-    private final OLAPSchemaManager olapSchemaManager;
 
     /**
      * This will store the properties of the print panel.
@@ -356,10 +342,6 @@ public class ArchitectSwingSessionImpl implements ArchitectSwingSession {
 
         compareDMSettings = new CompareDMSettings();
 
-        kettleJob = new KettleJob(this);
-
-        olapSchemaManager = new OLAPSchemaManager(this);
-        
         this.dbTree = new DBTree(this);
         
         if (isEnterpriseSession()) {
@@ -421,8 +403,6 @@ public class ArchitectSwingSessionImpl implements ArchitectSwingSession {
         lifecycleListeners = new ArrayList<SessionLifecycleListener<ArchitectSession>>();
 
         swingWorkers = new HashSet<SPSwingWorker>();
-        
-        olapEditSessions = new ArrayList<OLAPEditSession>();
         
         printSettings = new PrintSettings();
         
@@ -906,13 +886,6 @@ public class ArchitectSwingSessionImpl implements ArchitectSwingSession {
         getProjectSettings().setSavingEntireSource(argSavingEntireSource);
     }
 
-    public KettleJob getKettleJob() {
-        return kettleJob;
-    }
-
-    public void setKettleJob(KettleJob kettleJob) {
-        this.kettleJob = kettleJob;
-    }
     // END STUFF BROUGHT IN FROM SwingUIProject
 
     public void addSessionLifecycleListener(SessionLifecycleListener<ArchitectSession> l) {
@@ -979,10 +952,6 @@ public class ArchitectSwingSessionImpl implements ArchitectSwingSession {
         delegateSession.setDDLGenerator(generator);
     }
     
-    public OLAPRootObject getOLAPRootObject() {
-        return getWorkspace().getOlapRootObject();
-    }
-    
     /**
      * Creates a new user prompter that uses a modal dialog to pose the given question.
      * 
@@ -1035,26 +1004,6 @@ public class ArchitectSwingSessionImpl implements ArchitectSwingSession {
     
     public ColumnVisibility getColumnVisibility() {
         return getProjectSettings().getColumnVisibility();
-    }
-    
-    public void showOLAPSchemaManager(Window owner) {
-        olapSchemaManager.showDialog(owner);
-    }
-
-    public List<OLAPEditSession> getOLAPEditSessions() {
-        return olapEditSessions;
-    }
-    
-    public OLAPEditSession getOLAPEditSession(OLAPSession olapSession) {
-        if (olapSession == null) {
-            throw new NullPointerException(Messages.getString("ArchitectSwingSessionImpl.nullOlapSession")); //$NON-NLS-1$
-        }
-        for (OLAPEditSession editSession : getOLAPEditSessions()) {
-            if (editSession.getOlapSession() == olapSession) {
-                return editSession;
-            }
-        }
-        return new OLAPEditSession(this, olapSession);
     }
     
     // docs inherit from interface

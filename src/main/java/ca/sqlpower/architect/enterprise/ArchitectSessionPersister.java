@@ -67,22 +67,17 @@ public class ArchitectSessionPersister extends SPSessionPersister {
             persistedProfileManager.setLoaded(true);
         }
         
-        String olapRootObjectUUID = (String) AbstractSPPersisterHelper.findPropertyAndRemove(
-                pso.getUUID(), "olapRootObject", persistedProperties);
-        
-        PersistedSPObject persistedOlapRootObject = AbstractSPPersisterHelper.findPersistedSPObject(
-                pso.getUUID(), olapRootObjectUUID, persistedObjects);
-        architectProject.getOlapRootObject().setUUID(olapRootObjectUUID);
-        persistedOlapRootObject.setLoaded(true);
-        
+        // Ignore any persisted KettleSettings that may exist in older project files
         String kettleSettingsUUID = (String) AbstractSPPersisterHelper.findPropertyAndRemove(
                 pso.getUUID(), "kettleSettings", persistedProperties);
-        
-        PersistedSPObject persistedKettleSettings = AbstractSPPersisterHelper.findPersistedSPObject(
-                pso.getUUID(), kettleSettingsUUID, persistedObjects);
-        persistedKettleSettings.setLoaded(true);
-        architectProject.getKettleSettings().setUUID(kettleSettingsUUID);
-        
+        if (kettleSettingsUUID != null) {
+            PersistedSPObject persistedKettleSettings = AbstractSPPersisterHelper.findPersistedSPObject(
+                    pso.getUUID(), kettleSettingsUUID, persistedObjects);
+            if (persistedKettleSettings != null) {
+                persistedKettleSettings.setLoaded(true);
+            }
+        }
+
         String criticManagerUUID = (String) AbstractSPPersisterHelper.findPropertyAndRemove(
                 pso.getUUID(), "criticManager", persistedProperties);
         

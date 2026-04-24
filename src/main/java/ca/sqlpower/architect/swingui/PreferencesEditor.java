@@ -81,13 +81,9 @@ public class PreferencesEditor {
         final DataSourceTypeEditor dsTypeEditor =
             new DataSourceTypeEditor(session.getDataSources(), owner, session.isEnterpriseSession());
 
-        // Add the Kettle Options Panel as a tab to the SPDataSourceTypePanel
-        final KettleDataSourceTypeOptionPanel kettleOptsPanel = new KettleDataSourceTypeOptionPanel();
-        dsTypeEditor.addTab(Messages.getString("PreferencesEditor.kettleSection"), kettleOptsPanel); //$NON-NLS-1$
-        
         final ArchitectPropertiesDataSourceTypeOptionPanel architectPropPanel = new ArchitectPropertiesDataSourceTypeOptionPanel();
         dsTypeEditor.addTab(Messages.getString("PreferencesEditor.propertiesSection"), architectPropPanel);
-    
+
         JPanel p = new JPanel(new BorderLayout());
         p.add(createLabelPanel(session), BorderLayout.NORTH);
         p.add(dsTypeEditor.getPanel(), BorderLayout.CENTER);
@@ -149,10 +145,6 @@ public class PreferencesEditor {
         final DataSourceTypeEditor dsTypeEditor =
             new DataSourceTypeEditor(session.getDataSources(), owner, session.isEnterpriseSession());
 
-        // Add the Kettle Options Panel as a tab to the SPDataSourceTypePanel
-        final KettleDataSourceTypeOptionPanel kettleOptsPanel = new KettleDataSourceTypeOptionPanel();
-        dsTypeEditor.addTab(Messages.getString("PreferencesEditor.kettleSection"), kettleOptsPanel); //$NON-NLS-1$
-        
         final ArchitectPropertiesDataSourceTypeOptionPanel architectPropPanel = new ArchitectPropertiesDataSourceTypeOptionPanel();
         dsTypeEditor.addTab(Messages.getString("PreferencesEditor.propertiesSection"), architectPropPanel);
         cp.add(dsTypeEditor.getPanel(), BorderLayout.CENTER); //$NON-NLS-1$

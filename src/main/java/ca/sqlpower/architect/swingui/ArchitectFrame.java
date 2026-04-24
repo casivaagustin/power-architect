@@ -87,7 +87,6 @@ import ca.sqlpower.architect.UserSettings;
 import ca.sqlpower.architect.enterprise.ArchitectClientSideSession;
 import ca.sqlpower.architect.layout.ArchitectLayout;
 import ca.sqlpower.architect.layout.FruchtermanReingoldForceLayout;
-import ca.sqlpower.architect.olap.OLAPSession;
 import ca.sqlpower.architect.swingui.PlayPen.CancelableListener;
 import ca.sqlpower.architect.swingui.action.AboutAction;
 import ca.sqlpower.architect.swingui.action.AlignTableAction;
@@ -111,7 +110,6 @@ import ca.sqlpower.architect.swingui.action.EditSelectedAction;
 import ca.sqlpower.architect.swingui.action.EditSelectedIndexAction;
 import ca.sqlpower.architect.swingui.action.EditSpecificIndexAction;
 import ca.sqlpower.architect.swingui.action.EditTableAction;
-import ca.sqlpower.architect.swingui.action.ExportCSVAction;
 import ca.sqlpower.architect.swingui.action.ExportDDLAction;
 import ca.sqlpower.architect.swingui.action.ExportHTMLReportAction;
 import ca.sqlpower.architect.swingui.action.ExportPlaypenToPDFAction;
@@ -119,7 +117,6 @@ import ca.sqlpower.architect.swingui.action.FocusToChildOrParentTableAction;
 import ca.sqlpower.architect.swingui.action.InsertColumnAction;
 import ca.sqlpower.architect.swingui.action.InsertIndexAction;
 import ca.sqlpower.architect.swingui.action.InvadersAction;
-import ca.sqlpower.architect.swingui.action.KettleJobAction;
 import ca.sqlpower.architect.swingui.action.OpenProjectAction;
 import ca.sqlpower.architect.swingui.action.PasteSelectedAction;
 import ca.sqlpower.architect.swingui.action.PreferencesAction;
@@ -133,7 +130,6 @@ import ca.sqlpower.architect.swingui.action.SQLQueryAction;
 import ca.sqlpower.architect.swingui.action.SearchReplaceAction;
 import ca.sqlpower.architect.swingui.action.SelectAllAction;
 import ca.sqlpower.architect.swingui.action.UndoAction;
-import ca.sqlpower.architect.swingui.action.VisualMappingReportAction;
 import ca.sqlpower.architect.swingui.action.ZoomAction;
 import ca.sqlpower.architect.swingui.action.ZoomResetAction;
 import ca.sqlpower.architect.swingui.action.ZoomToFitAction;
@@ -144,9 +140,6 @@ import ca.sqlpower.architect.swingui.enterprise.RevisionListPanel;
 import ca.sqlpower.architect.swingui.enterprise.SecurityPanel;
 import ca.sqlpower.architect.swingui.event.SelectionEvent;
 import ca.sqlpower.architect.swingui.event.SelectionListener;
-import ca.sqlpower.architect.swingui.olap.action.ImportSchemaAction;
-import ca.sqlpower.architect.swingui.olap.action.OLAPEditAction;
-import ca.sqlpower.architect.swingui.olap.action.OLAPSchemaManagerAction;
 import ca.sqlpower.enterprise.client.ConnectionTestAction;
 import ca.sqlpower.enterprise.client.ProjectLocation;
 import ca.sqlpower.enterprise.client.SPServerInfo;
@@ -893,9 +886,6 @@ public class ArchitectFrame extends JFrame {
     
     public JMenuBar createNewMenuBar() { 
         checkForUpdateAction = new CheckForUpdateAction(this);
-        Action exportCSVAction = new ExportCSVAction(this);
-        Action mappingReportAction = new VisualMappingReportAction(this);
-        Action kettleETL = new KettleJobAction(this);
         Action exportHTMLReportAction = new ExportHTMLReportAction(this);
         menuBar = new JMenuBar();
 
@@ -995,40 +985,6 @@ public class ArchitectFrame extends JFrame {
             }
         });
         
-        JMenu etlMenu = new JMenu(Messages.getString("ArchitectFrame.etlMenu")); //$NON-NLS-1$
-        etlMenu.setMnemonic('l');
-        etlMenu.add(exportCSVAction);
-        etlMenu.add(mappingReportAction);
-        etlMenu.add(kettleETL);
-        menuBar.add(etlMenu);
-
-        final JMenu olapMenu = new JMenu(Messages.getString("ArchitectFrame.olapMenu")); //$NON-NLS-1$
-        olapMenu.setMnemonic('o');
-        final JMenu olapEditMenu = buildOLAPEditMenu();
-        olapMenu.add(olapEditMenu);
-        olapMenu.add(new ImportSchemaAction(this));
-        olapMenu.addSeparator();
-        olapMenu.add(new OLAPSchemaManagerAction(this));
-        olapMenu.addMenuListener(new MenuListener(){
-            
-            private JMenu editMenu = olapEditMenu;
-            
-            public void menuCanceled(MenuEvent e) {
-                // do nothing here
-            }
-            public void menuDeselected(MenuEvent e) {
-                // do nothing here
-            }
-            
-            public void menuSelected(MenuEvent e) {
-                // updates for new OLAP schemas
-                olapMenu.remove(editMenu);
-                editMenu = buildOLAPEditMenu();
-                olapMenu.add(editMenu, 0);
-            }
-        });
-        menuBar.add(olapMenu);
-
         // Enterprise stuff ...
         enterpriseMenu = new JMenu("Enterprise");
         enterpriseLinkButton = new JMenuItem(enterpriseLinkAction);
@@ -1157,7 +1113,6 @@ public class ArchitectFrame extends JFrame {
         ArchitectSwingSession oldSession = currentSession;
         currentSession = newSession;
         
-        buildOLAPEditMenu();
         toggleEnterpriseMenu();
 
         for (SelectionListener l : selectionListeners) {
@@ -1237,17 +1192,6 @@ public class ArchitectFrame extends JFrame {
         return enterpriseMenu;
     }
     
-    // Must rebuild OLAP Menu whenever session changes
-    private JMenu buildOLAPEditMenu() {
-        JMenu menu = new JMenu(Messages.getString("ArchitectFrame.editSchemaMenu")); //$NON-NLS-1$
-        menu.add(new JMenuItem(new OLAPEditAction(currentSession, null)));
-        menu.addSeparator(); 
-        for (OLAPSession olapSession : currentSession.getOLAPRootObject().getChildren()) {
-            menu.add(new JMenuItem(new OLAPEditAction(currentSession, olapSession)));
-        }
-        return menu;
-    }
-
     /**
      * Adds a session to the stacked tab tree in this frame. The session will
      * have its GUI components initialized as part of this process.

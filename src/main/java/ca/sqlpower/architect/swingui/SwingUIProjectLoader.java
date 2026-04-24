@@ -58,25 +58,12 @@ import ca.sqlpower.architect.ddl.critic.CriticAndSettings;
 import ca.sqlpower.architect.ddl.critic.CriticGrouping;
 import ca.sqlpower.architect.ddl.critic.CriticManager;
 import ca.sqlpower.architect.ddl.critic.CriticAndSettings.Severity;
-import ca.sqlpower.architect.olap.MondrianXMLReader;
-import ca.sqlpower.architect.olap.MondrianXMLWriter;
-import ca.sqlpower.architect.olap.OLAPObject;
-import ca.sqlpower.architect.olap.OLAPSession;
-import ca.sqlpower.architect.olap.MondrianModel.Cube;
-import ca.sqlpower.architect.olap.MondrianModel.Dimension;
-import ca.sqlpower.architect.olap.MondrianModel.VirtualCube;
 import ca.sqlpower.architect.profile.ColumnProfileResult;
 import ca.sqlpower.architect.profile.ColumnValueCount;
 import ca.sqlpower.architect.profile.ProfileManager;
 import ca.sqlpower.architect.profile.ProfileResult;
 import ca.sqlpower.architect.profile.TableProfileResult;
 import ca.sqlpower.architect.swingui.CompareDMSettings.SourceOrTargetSettings;
-import ca.sqlpower.architect.swingui.olap.CubePane;
-import ca.sqlpower.architect.swingui.olap.DimensionPane;
-import ca.sqlpower.architect.swingui.olap.OLAPEditSession;
-import ca.sqlpower.architect.swingui.olap.OLAPPane;
-import ca.sqlpower.architect.swingui.olap.UsageComponent;
-import ca.sqlpower.architect.swingui.olap.VirtualCubePane;
 import ca.sqlpower.sql.DataSourceCollection;
 import ca.sqlpower.sql.SPDataSource;
 import ca.sqlpower.sqlobject.SQLCatalog;
@@ -129,26 +116,6 @@ public class SwingUIProjectLoader extends ProjectLoader {
     private static final Logger logger = Logger.getLogger(SwingUIProjectLoader.class);
 
     /**
-     * This map maps String ID codes to OLAPObject instances used in loading.
-     */
-    protected Map<String, OLAPObject> olapObjectLoadIdMap;
-
-    /**
-     * This holds mappings from OLAPObject instance to String ID used in saving.
-     */
-    protected Map<OLAPObject, String> olapObjectSaveIdMap;
-    
-    /**
-     * This holds mappings from OLAPPane instance to String ID used in saving.
-     */
-    private Map<OLAPPane<?, ?>, String> olapPaneSaveIdMap;
-
-    /**
-     * This map maps String ID codes to OLAPPane instances used in loading.
-     */
-    protected  Map<String, OLAPPane<?, ?>> olapPaneLoadIdMap;
-    
-    /**
      * Shows progress during saves and loads.
      */
     private ProgressMonitor pm;
@@ -169,18 +136,6 @@ public class SwingUIProjectLoader extends ProjectLoader {
         this.session = session;
     }
 
-    /**
-     * Override that also considers whether each OLAP edit session has modifications.
-     */
-    @Override
-    public boolean isModified() {
-        boolean olapModified = false;
-        for (OLAPEditSession oSession : getSession().getOLAPEditSessions()) {
-            olapModified |= oSession.isModified();
-        }
-        return olapModified || super.isModified();
-    }
-    
     public void load(InputStream in, DataSourceCollection<? extends SPDataSource> dataSources) throws IOException, SQLObjectException {
         load(in, dataSources, null);
     }
@@ -189,57 +144,19 @@ public class SwingUIProjectLoader extends ProjectLoader {
 
     public void load(InputStream in, DataSourceCollection<? extends SPDataSource> dataSources,
             ArchitectSession messageDelegate) throws IOException, SQLObjectException {
-        olapPaneLoadIdMap = new HashMap<String, OLAPPane<?, ?>>();
-        
         UnclosableInputStream uin = new UnclosableInputStream(in);
-        olapObjectLoadIdMap = new HashMap<String, OLAPObject>();
-        
-        // sqlObjectLoadIdMap is not ready yet when parsing the olap objects
-        // so this keeps track of the id of the SQLDatabase that OLAPSessions reference.
-        Map<OLAPSession, String> sessionDbMap = new HashMap<OLAPSession, String>();
-        
+
         try {
             getSession().getUndoManager().setLoading(true);
-            if (uin.markSupported()) {
-                uin.mark(Integer.MAX_VALUE);
-            } else {
-                throw new IllegalStateException("Failed to load with an input stream that does not support mark!");
-            }
-
-            // parse the Mondrian business model parts first because the olap id
-            // map is needed in the digester for parsing the olap gui
-            try {
-                MondrianXMLReader.parse(uin, getSession().getOLAPRootObject(), sessionDbMap, olapObjectLoadIdMap);
-            } catch (SAXException e) {
-                logger.error("Error parsing project file's olap schemas!", e);
-                throw new SQLObjectException("SAX Exception in project file olap schemas parse!", e);
-            } catch (Exception ex) {
-                logger.error("General Exception in project file olap schemas parse!", ex);
-                throw new SQLObjectException("Unexpected Exception", ex);
-            }
-            
-            in.reset();
-            
             super.load(in, dataSources, messageDelegate);
         } finally {
             getSession().getUndoManager().setLoading(false);
             uin.forceClose();
         }
-        
-        // now that the sqlObjectLoadIdMap is populated, we can set the
-        // OLAPSessions' database.
-        for (Map.Entry<OLAPSession, String> entry : sessionDbMap.entrySet()) {
-            OLAPSession oSession = entry.getKey();
-            SQLDatabase db = (SQLDatabase) sqlObjectLoadIdMap.get(entry.getValue());
-            oSession.setDatabase(db);
-        }
-        
+
         // set the view positions again in the case that the viewport was invalid earlier.
         getSession().getPlayPen().setInitialViewPosition();
-        for (OLAPEditSession editSession : getSession().getOLAPEditSessions()) {
-            editSession.getOlapPlayPen().setInitialViewPosition();
-        }
-        
+
         // TODO change this to load the undo history from a file
         getSession().getUndoManager().discardAllEdits();
     }
@@ -278,10 +195,6 @@ public class SwingUIProjectLoader extends ProjectLoader {
         d.addFactoryCreate("architect-project/compare-dm-settings/liquibase-settings", lbSettingsFactory); //$NON-NLS-1$
         d.addSetProperties("architect-project/compare-dm-settings/liquibase-settings"); //$NON-NLS-1$
 
-        CreateKettleJobSettingsFactory ckjsFactory = new CreateKettleJobSettingsFactory();
-        d.addFactoryCreate("architect-project/create-kettle-job-settings", ckjsFactory); //$NON-NLS-1$
-        d.addSetProperties("architect-project/create-kettle-job-settings"); //$NON-NLS-1$
-        
         CriticManagerFactory criticManagerFactory = new CriticManagerFactory();
         d.addFactoryCreate("architect-project/critic-manager", criticManagerFactory);
         d.addSetProperties("architect-project/critic-manager");
@@ -293,42 +206,7 @@ public class SwingUIProjectLoader extends ProjectLoader {
         CriticSettingsFactory criticSettingsFactory = new CriticSettingsFactory();
         d.addFactoryCreate("architect-project/critic-manager/critic-grouping/critic-settings", criticSettingsFactory);
         
-        // olap factories
-        
-        OLAPEditSessionFactory editSessionFactory = new OLAPEditSessionFactory();
-        d.addFactoryCreate("architect-project/olap-gui/olap-edit-session", editSessionFactory); //$NON-NLS-1$
-        
-        OLAPPlayPenFactory olapPPFactory = new OLAPPlayPenFactory();
-        d.addFactoryCreate("architect-project/olap-gui/olap-edit-session/play-pen", olapPPFactory); //$NON-NLS-1$
-
-        CubePaneFactory cubePaneFactory = new CubePaneFactory();
-        d.addFactoryCreate("*/play-pen/cube-pane", cubePaneFactory); //$NON-NLS-1$
-        
-        VirtualCubePaneFactory virtualCubePaneFactory = new VirtualCubePaneFactory();
-        d.addFactoryCreate("*/play-pen/virtual-cube-pane", virtualCubePaneFactory); //$NON-NLS-1$
-        
-        DimensionPaneFactory dimensionPaneFactory = new DimensionPaneFactory();
-        d.addFactoryCreate("*/play-pen/dimension-pane", dimensionPaneFactory); //$NON-NLS-1$
-        
-        UsageComponentFactory usageCompFactory = new UsageComponentFactory();
-        d.addFactoryCreate("*/play-pen/usage-comp", usageCompFactory); //$NON-NLS-1$
-
         return d;
-    }
-    
-    private class OLAPPlayPenFactory extends AbstractObjectCreationFactory {
-        public Object createObject(Attributes attributes) {
-            Object topItem = getDigester().peek();
-            if (!(topItem instanceof OLAPEditSession)) {
-                logger.error("Expected parent OLAPEditSession object on top of stack but found: " + topItem); //$NON-NLS-1$
-                throw new IllegalStateException("Parent OLAPEditSession not found!"); //$NON-NLS-1$
-            }
-            
-            OLAPEditSession editSession = (OLAPEditSession) topItem;
-            PlayPen pp = editSession.getOlapPlayPen();
-            setupGenericPlayPen(pp, attributes);
-            return pp;
-        }
     }
     
     private class RelationalPlayPenFactory extends AbstractObjectCreationFactory {
@@ -466,87 +344,6 @@ public class SwingUIProjectLoader extends ProjectLoader {
         }
     }
     
-    private class CubePaneFactory extends AbstractObjectCreationFactory {
-        public Object createObject(Attributes attributes) {
-            Object topItem = getDigester().peek();
-            if (!(topItem instanceof PlayPen)) {
-                logger.error("Expected parent PlayPen object on top of stack but found: " + topItem); //$NON-NLS-1$
-                throw new IllegalStateException("Parent PlayPen object not found!"); //$NON-NLS-1$
-            }
-            
-            PlayPen pp = (PlayPen) topItem;
-            int x = Integer.parseInt(attributes.getValue("x")); //$NON-NLS-1$
-            int y = Integer.parseInt(attributes.getValue("y")); //$NON-NLS-1$
-            Cube cube = (Cube) olapObjectLoadIdMap.get(attributes.getValue("model-ref")); //$NON-NLS-1$
-            CubePane cp = new CubePane(cube, pp.getContentPane());
-                
-            pp.addPlayPenComponent(cp, new Point(x, y));
-            
-            String id = attributes.getValue("id");
-            if (id != null) {
-                olapPaneLoadIdMap.put(id, cp);
-            } else {
-                logger.warn("No ID element found in cube pane element while loading project!");
-            }
-            
-            return cp;
-        }
-    }
-    
-    private class VirtualCubePaneFactory extends AbstractObjectCreationFactory {
-        public Object createObject(Attributes attributes) {
-            Object topItem = getDigester().peek();
-            if (!(topItem instanceof PlayPen)) {
-                logger.error("Expected parent PlayPen object on top of stack but found: " + topItem); //$NON-NLS-1$
-                throw new IllegalStateException("Parent PlayPen object not found!"); //$NON-NLS-1$
-            }
-            
-            PlayPen pp = (PlayPen) topItem;
-            int x = Integer.parseInt(attributes.getValue("x")); //$NON-NLS-1$
-            int y = Integer.parseInt(attributes.getValue("y")); //$NON-NLS-1$
-            VirtualCube virtualCube = (VirtualCube) olapObjectLoadIdMap.get(attributes.getValue("model-ref")); //$NON-NLS-1$
-            VirtualCubePane vcp = new VirtualCubePane(virtualCube, pp.getContentPane());
-                
-            pp.addPlayPenComponent(vcp, new Point(x, y));
-            
-            String id = attributes.getValue("id");
-            if (id != null) {
-                olapPaneLoadIdMap.put(id, vcp);
-            } else {
-                logger.warn("No ID element found in virtual cube pane element while loading project!");
-            }
-            
-            return vcp;
-        }
-    }
-    
-    private class DimensionPaneFactory extends AbstractObjectCreationFactory {
-        public Object createObject(Attributes attributes) {
-            Object topItem = getDigester().peek();
-            if (!(topItem instanceof PlayPen)) {
-                logger.error("Expected parent PlayPen object on top of stack but found: " + topItem); //$NON-NLS-1$
-                throw new IllegalStateException("Parent PlayPen object not found!"); //$NON-NLS-1$
-            }
-            
-            PlayPen pp = (PlayPen) topItem;
-            int x = Integer.parseInt(attributes.getValue("x")); //$NON-NLS-1$
-            int y = Integer.parseInt(attributes.getValue("y")); //$NON-NLS-1$
-            Dimension dim = (Dimension) olapObjectLoadIdMap.get(attributes.getValue("model-ref")); //$NON-NLS-1$
-            DimensionPane dp = new DimensionPane(dim, pp.getContentPane());
-                
-            pp.addPlayPenComponent(dp, new Point(x, y));
-            
-            String id = attributes.getValue("id");
-            if (id != null) {
-                olapPaneLoadIdMap.put(id, dp);
-            } else {
-                logger.warn("No ID element found in dimension pane element while loading project!");
-            }
-            
-            return dp;
-        }
-    }
-
     private class PPRelationshipFactory extends AbstractObjectCreationFactory {
         public Object createObject(Attributes attributes) {
             Object topItem = getDigester().peek();
@@ -628,40 +425,6 @@ public class SwingUIProjectLoader extends ProjectLoader {
         }
     }
     
-    private class UsageComponentFactory extends AbstractObjectCreationFactory {
-        public Object createObject(Attributes attributes) {
-            Object topItem = getDigester().peek();
-            if (!(topItem instanceof PlayPen)) {
-                logger.error("Expected parent PlayPen object on top of stack but found: " + topItem); //$NON-NLS-1$
-                throw new IllegalStateException("Parent PlayPen object not found!"); //$NON-NLS-1$
-            }
-            
-            PlayPen pp = (PlayPen) topItem;
-            OLAPObject model = olapObjectLoadIdMap.get(attributes.getValue("model-ref")); //$NON-NLS-1$
-            OLAPPane<?, ?> pane1 = olapPaneLoadIdMap.get(attributes.getValue("pane1-ref")); //$NON-NLS-1$
-            OLAPPane<?, ?> pane2 = olapPaneLoadIdMap.get(attributes.getValue("pane2-ref")); //$NON-NLS-1$
-            UsageComponent usageComp = new UsageComponent(pp.getContentPane(), model, pane1, pane2);
-            
-            pp.getContentPane().addChild(usageComp, pp.getContentPane().getChildren().size());
-            return usageComp;
-        }
-    }
-
-    private class OLAPEditSessionFactory extends AbstractObjectCreationFactory {
-        public Object createObject(Attributes attributes) {
-            OLAPSession oSession =
-                (OLAPSession) olapObjectLoadIdMap.get(attributes.getValue("osession-ref")); //$NON-NLS-1$
-            return getSession().getOLAPEditSession(oSession);
-        }
-    }
-    
-
-    private class CreateKettleJobSettingsFactory extends AbstractObjectCreationFactory {
-        public Object createObject(Attributes attributes) throws SQLException {
-            return getSession().getKettleJob();
-        }
-    }
-
     /**
      * Creates a LiquibaseSettings instance and adds it to the objectIdMap.
      */
@@ -876,9 +639,7 @@ public class SwingUIProjectLoader extends ProjectLoader {
      */
     public void save(PrintWriter out, String encoding) throws IOException {
         sqlObjectSaveIdMap = new IdentityHashMap<SQLObject, String>();
-        olapObjectSaveIdMap = new IdentityHashMap<OLAPObject, String>();
         dbcsSaveIdMap = new HashMap<SPDataSource, String>();
-        olapPaneSaveIdMap = new HashMap<OLAPPane<?,?>, String>();
         
         ioo.indent = 0;
 
@@ -893,21 +654,14 @@ public class SwingUIProjectLoader extends ProjectLoader {
             saveTargetDatabase(out);
             saveDDLGenerator(out);
             saveCompareDMSettings(out);
-            saveCreateKettleJobSettings(out);
             savePlayPen(out, getSession().getPlayPen(), true);
             saveCriticSettings(out);
             saveProfiles(out);
-            
-            saveOLAP(out);
-            saveOLAPGUI(out);
-            
+
             ioo.indent--;
             ioo.println(out, "</architect-project>"); //$NON-NLS-1$
-            
+
             setModified(false);
-            for (OLAPEditSession oSession : getSession().getOLAPEditSessions()) {
-                oSession.saveNotify();
-            }
         } catch (IOException e) {
             ioo.println(out, new ExceptionReport(e, "", ArchitectVersion.APP_FULL_VERSION.toString(), "Architect").toXML());
             throw e;
@@ -921,56 +675,6 @@ public class SwingUIProjectLoader extends ProjectLoader {
 
     public void save(OutputStream out, String encoding) throws IOException {
         save(new PrintWriter(new OutputStreamWriter(out, encoding)), encoding);
-    }
-    
-    private void saveOLAP(PrintWriter out) {
-        ioo.indent++;
-        ioo.println(out, "<olap>"); //$NON-NLS-1$
-        ioo.indent++;
-        
-        for (OLAPSession osession : getSession().getOLAPRootObject().getChildren()) {
-            String id = Integer.toString(olapObjectSaveIdMap.size());
-            if (olapObjectSaveIdMap.put(osession, id) != null) {
-                logger.debug("Duplicate OLAPObject in project file xml: " + osession); //$NON-NLS-1$
-                throw new IllegalStateException("Duplicate OLAPObject found in project file!"); //$NON-NLS-1$
-            }
-            StringBuilder tagText = new StringBuilder();
-            tagText.append("<olap-session id=").append(quote(id)); //$NON-NLS-1$
-            
-            if (osession.getDatabase() != null) {
-                tagText.append(" db-ref="); //$NON-NLS-1$
-                tagText.append(quote(sqlObjectSaveIdMap.get(osession.getDatabase())));
-            }
-            tagText.append(">"); //$NON-NLS-1$
-            ioo.println(out, tagText.toString());
-            
-            ioo.indent++;
-            MondrianXMLWriter.write(out, osession.getSchema(), false, ioo.indent, olapObjectSaveIdMap);
-            ioo.indent--;
-            ioo.println(out, "</olap-session>"); //$NON-NLS-1$
-        }
-        ioo.indent--;
-        ioo.println(out, "</olap>"); //$NON-NLS-1$
-        ioo.indent--;
-    }
-    
-    private void saveOLAPGUI(PrintWriter out) {
-        ioo.indent++;
-        ioo.println(out, "<olap-gui>");
-        
-        ioo.indent++;
-        for (OLAPEditSession editSession : getSession().getOLAPEditSessions()) {
-            ioo.println(out, "<olap-edit-session osession-ref=" + //$NON-NLS-1$ 
-                    quote(olapObjectSaveIdMap.get(editSession.getOlapSession())) + ">"); //$NON-NLS-1$ 
-            ioo.indent++;
-            savePlayPen(out, editSession.getOlapPlayPen(), false);
-            ioo.indent--;
-            ioo.println(out, "</olap-edit-session>"); //$NON-NLS-1$
-        }
-        ioo.indent--;
-        
-        ioo.println(out, "</olap-gui>");
-        ioo.indent--;
     }
     
     private void saveDataSources(PrintWriter out) throws IOException {
@@ -1028,16 +732,6 @@ public class SwingUIProjectLoader extends ProjectLoader {
 		saveLiquibaseSettings(out, session.getLiquibaseSettings());
     }
     
-    private void saveCreateKettleJobSettings(PrintWriter out) throws IOException {
-        ioo.print(out, "<create-kettle-job-settings"); //$NON-NLS-1$
-        ioo.niprint(out, " filePath=\"" + SQLPowerUtils.escapeXML(getSession().getKettleJob().getFilePath()) + "\""); //$NON-NLS-1$ //$NON-NLS-2$
-        ioo.niprint(out, " jobName=\"" + SQLPowerUtils.escapeXML(getSession().getKettleJob().getJobName()) + "\""); //$NON-NLS-1$ //$NON-NLS-2$
-        ioo.niprint(out, " schemaName=\"" + SQLPowerUtils.escapeXML(getSession().getKettleJob().getSchemaName()) + "\""); //$NON-NLS-1$ //$NON-NLS-2$
-        ioo.niprint(out, " kettleJoinType=\"" + getSession().getKettleJob().getKettleJoinType() + "\""); //$NON-NLS-1$ //$NON-NLS-2$
-        ioo.niprint(out, " savingToFile=\"" + getSession().getKettleJob().isSavingToFile() + "\""); //$NON-NLS-1$ //$NON-NLS-2$
-        ioo.niprintln(out, " />"); //$NON-NLS-1$
-    }
-
     /**
      * Writes out the CompareDM settings for this project unless the user has not
      * used that feature.
@@ -1246,36 +940,6 @@ public class SwingUIProjectLoader extends ProjectLoader {
                 if (pm != null) {
                     pm.setProgress(++progress);
                 }
-            } else if (ppc instanceof CubePane) {
-                CubePane cp = (CubePane) ppc;
-                Point p = cp.getLocation();
-
-                String modelId = olapObjectSaveIdMap.get(cp.getModel());
-                String paneId = "CP" + olapPaneSaveIdMap.size(); //$NON-NLS-1$
-                
-                ioo.println(out, "<cube-pane id=" + quote(paneId) + " model-ref=" + quote(modelId) //$NON-NLS-1$ //$NON-NLS-2$
-                        + " x=\"" + p.x + "\" y=\"" + p.y+"\"/>"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-                olapPaneSaveIdMap.put(cp, paneId);
-            } else if (ppc instanceof DimensionPane) {
-                DimensionPane dp = (DimensionPane) ppc;
-                Point p = dp.getLocation();
-                
-                String paneId = "DP" + olapPaneSaveIdMap.size();
-                String modelId = olapObjectSaveIdMap.get(dp.getModel());
-                
-                ioo.println(out, "<dimension-pane id=" + quote(paneId) + " model-ref=" + quote(modelId) //$NON-NLS-1$ //$NON-NLS-2$
-                        + " x=\"" + p.x + "\" y=\"" + p.y + "\"/>"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-                olapPaneSaveIdMap.put(dp, paneId);
-            } else if (ppc instanceof VirtualCubePane) {
-                VirtualCubePane vcp = (VirtualCubePane) ppc;
-                Point p = vcp.getLocation();
-                
-                String paneId = "VCP" + olapPaneSaveIdMap.size();
-                String modelId = olapObjectSaveIdMap.get(vcp.getModel());
-                
-                ioo.println(out, "<virtual-cube-pane id=" + quote(paneId) + " model-ref=" + quote(modelId) //$NON-NLS-1$ //$NON-NLS-2$
-                        + " x=\"" + p.x + "\" y=\"" + p.y + "\"/>"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-                olapPaneSaveIdMap.put(vcp, paneId);
             } else if (ppc instanceof ContainerPane<?, ?>) {
                 logger.warn("Skipping unhandled playpen component: " + ppc); //$NON-NLS-1$
             }
@@ -1296,14 +960,6 @@ public class SwingUIProjectLoader extends ProjectLoader {
                         +" pkLabelText="+quote(r.getTextForParentLabel()) //$NON-NLS-1$
                         +" fkLabelText="+quote(r.getTextForChildLabel()) //$NON-NLS-1$
                         +" orientation=\"" + r.getOrientation() + "\"/>"); //$NON-NLS-1$ //$NON-NLS-2$
-            } else if (ppc instanceof UsageComponent) {
-                UsageComponent usageComp = (UsageComponent) ppc;
-                String modelId = olapObjectSaveIdMap.get(usageComp.getModel());
-                String pane1Id = olapPaneSaveIdMap.get(usageComp.getPane1());
-                String pane2Id = olapPaneSaveIdMap.get(usageComp.getPane2());
-                
-                ioo.println(out, "<usage-comp model-ref=" + quote(modelId) + //$NON-NLS-1$
-                        " pane1-ref=" + quote(pane1Id) + " pane2-ref=" + quote(pane2Id) + "/>"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             } else if (ppc instanceof ContainerPane<?, ?>) {
                 // do nothing, already handled.
             } else {
